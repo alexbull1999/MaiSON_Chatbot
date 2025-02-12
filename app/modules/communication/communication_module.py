@@ -1,0 +1,101 @@
+from typing import Dict, List, Optional
+from enum import Enum
+from ..llm import LLMClient, LLMProvider
+
+class MessageType(Enum):
+    GREETING = "greeting"
+    INQUIRY = "inquiry"
+    RESPONSE = "response"
+    CONFIRMATION = "confirmation"
+    ERROR = "error"
+
+class CommunicationModule:
+    def __init__(self):
+        self.templates: Dict[MessageType, List[str]] = {
+            MessageType.GREETING: [
+                "Welcome to maiSON! How can I assist you today?",
+                "Hello! I'm here to help you with your property needs."
+            ],
+            MessageType.ERROR: [
+                "I apologize, but I couldn't process that request.",
+                "Something went wrong. Could you please try again?"
+            ]
+        }
+        # Initialize LLM client with Gemini provider
+        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+
+    def format_message(self, message_type: MessageType, **kwargs) -> str:
+        """
+        Format a message based on the message type and provided parameters.
+        This is a synchronous method as it doesn't involve any I/O operations.
+        """
+        templates = self.templates.get(message_type, [])
+        if not templates:
+            return "I apologize, but I'm not sure how to respond to that."
+        
+        template = templates[0]  # Use first template for now
+        try:
+            return template.format(**kwargs)
+        except KeyError as e:
+            print(f"Error formatting message: Missing key {str(e)}")
+            return template
+        except Exception as e:
+            print(f"Error formatting message: {str(e)}")
+            return "I apologize, but I couldn't format the response correctly."
+
+    async def generate_response(self, intent: str, context: dict) -> str:
+        """
+        Generate a response based on the intent and context using the LLM.
+        """
+        if not context:
+            return self.format_message(MessageType.ERROR)
+
+        # Prepare conversation history for LLM
+        messages = []
+        
+        # Add conversation history if available
+        if "conversation_history" in context:
+            for msg in context["conversation_history"]:
+                messages.append({
+                    "role": "user" if msg["role"] == "user" else "assistant",
+                    "content": msg["content"]
+                })
+
+        # Add current query with intent and context
+        current_query = {
+            "role": "user",
+            "content": f"Intent: {intent}\nContext: {str(context)}\nPlease provide a response based on this information."
+        }
+        messages.append(current_query)
+
+        try:
+            # Generate response using LLM
+            llm_response = await self.llm_client.generate_response(
+                messages=messages,
+                temperature=0.7,  # Adjust based on need for creativity vs consistency
+                max_tokens=300    # Adjust based on desired response length
+            )
+            return llm_response
+        except Exception as e:
+            # Log the error and return a fallback response
+            print(f"Error generating LLM response: {str(e)}")
+            return f"I understand you're interested in {intent}. Let me help you with that."
+
+    async def generate_property_description(self, property_data: Dict) -> str:
+        """
+        Generate a natural language description of a property using the LLM.
+        """
+        prompt = {
+            "role": "user",
+            "content": f"Please generate a natural, engaging description of this property:\n{str(property_data)}"
+        }
+        
+        try:
+            return await self.llm_client.generate_response(
+                messages=[prompt],
+                temperature=0.7,
+                max_tokens=200
+            )
+        except Exception as e:
+            # Fallback to basic description
+            return f"This is a {property_data.get('type', 'property')} located in {property_data.get('location', 'the area')}." 
