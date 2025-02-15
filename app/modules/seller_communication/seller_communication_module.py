@@ -1,7 +1,7 @@
-from typing import Dict, Optional
+from typing import Dict
 from datetime import datetime
 from sqlalchemy.orm import Session
-from app.database.models import Message, Conversation, ExternalReference
+from app.database.models import Message, ExternalReference
 
 class SellerCommunicationModule:
     def __init__(self):

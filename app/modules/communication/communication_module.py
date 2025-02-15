@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from enum import Enum
 from ..llm import LLMClient, LLMProvider
 
@@ -34,10 +34,10 @@ class CommunicationModule:
         try:
             return template.format(**kwargs)
         except KeyError:
-            print(f"Error formatting message: Missing required parameters")
+            print("Error formatting message: Missing required parameters")
             return template
         except Exception:
-            print(f"Error formatting message")
+            print("Error formatting message")
             return "I apologize, but I couldn't format the response correctly."
 
     async def generate_response(self, intent: str, context: dict) -> str:
@@ -84,6 +84,54 @@ class CommunicationModule:
             # Log the error and return a fallback response
             print("Error generating LLM response")
             return f"I understand you're interested in {intent}. Let me help you with that."
+
+    async def handle_seller_message(self, message: str, context: Optional[Dict] = None) -> str:
+        """Handle messages intended for property sellers."""
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a real estate agent communicating with a seller. "
+                            "Help facilitate communication between buyers and sellers."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7
+            )
+            return response
+        except Exception:
+            return (
+                "I apologize, but I'm having trouble processing your message for the seller. "
+                "Please try again later or contact our office directly."
+            )
+
+    async def handle_unclear_intent(self, message: str, context: Optional[Dict] = None) -> str:
+        """Handle messages with unclear intent."""
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a helpful real estate assistant. "
+                            "The user's intent is unclear. "
+                            "Try to understand their needs and provide relevant assistance."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7
+            )
+            return response
+        except Exception:
+            return (
+                "I'm not quite sure what you're asking. "
+                "Could you please rephrase your question or specify what kind of "
+                "property information you're looking for?"
+            )
 
     async def generate_property_description(self, property_data: Dict) -> str:
         """

@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
 
 def format_datetime(dt: datetime) -> str:
     """Format datetime to string."""
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-def parse_date_range(date_str: str) -> tuple[datetime, datetime]:
+def parse_date_range(dt: datetime) -> tuple[datetime, datetime]:
     """Parse date range string into start and end dates."""
     # TODO: Implement proper date range parsing
     today = datetime.now()

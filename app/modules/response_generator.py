@@ -1,15 +1,17 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from .communication.communication_module import CommunicationModule, MessageType
 
 class ResponseGenerator:
     def __init__(self):
         self.communication_module = CommunicationModule()
 
-    async def generate_response(self, 
-                         intent: str, 
-                         context: dict, 
-                         property_data: Optional[Dict] = None,
-                         market_data: Optional[Dict] = None) -> str:
+    async def generate_response(
+            self,
+            intent: str,
+            context: dict,
+            property_data: Optional[Dict] = None,
+            market_data: Optional[Dict] = None
+    ) -> str:
         """
         Generate a comprehensive response based on intent, context, and available data.
         """
@@ -22,18 +24,22 @@ class ResponseGenerator:
             )
 
         # Generate main response based on available data
-        main_response = await self._generate_main_response(intent, context, property_data, market_data)
+        main_response = await self._generate_main_response(
+            intent, context, property_data, market_data
+        )
         if main_response:
             response_parts.append(main_response)
 
         # Combine all parts
         return "\n".join(filter(None, response_parts))
 
-    async def _generate_main_response(self,
-                              intent: str,
-                              context: dict,
-                              property_data: Optional[Dict],
-                              market_data: Optional[Dict]) -> str:
+    async def _generate_main_response(
+            self,
+            intent: str,
+            context: dict,
+            property_data: Optional[Dict],
+            market_data: Optional[Dict]
+    ) -> str:
         """
         Generate the main part of the response based on the intent and available data.
         """

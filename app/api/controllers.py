@@ -83,28 +83,21 @@ class ChatController:
             try:
                 # Generate response using message router
                 print("Debug: Generating response using message router")
-                response_text = await self.message_router.process_message(
-                    message=message,
-                    db=db,
-                    context=context
-                )
+                response = await self.message_router.route_message(message=message, context=context)
+                response_text = response["response"]
+                intent = response["intent"]
                 print(f"Debug: Generated response: {response_text[:100]}...")
             except Exception as e:
                 print(f"Error generating response: {str(e)}")
                 raise
             
             try:
-                # Classify intent
-                print("Debug: Classifying intent")
-                intent = await self.message_router.intent_classifier.classify(message)
-                print(f"Debug: Classified intent: {intent}")
-                
                 # Create assistant message
                 assistant_message = Message(
                     conversation_id=conversation.id,
                     role="assistant",
                     content=response_text,
-                    intent=str(intent.value),
+                    intent=intent,
                     created_at=datetime.utcnow(),
                     metadata={
                         "context_used": context,
@@ -114,7 +107,7 @@ class ChatController:
                 db.add(assistant_message)
                 print("Debug: Added assistant message to database")
             except Exception as e:
-                print(f"Error in intent classification: {str(e)}")
+                print(f"Error creating assistant message: {str(e)}")
                 raise
 
             # Update conversation last_message_at
@@ -126,19 +119,20 @@ class ChatController:
             db.commit()
             print("Debug: Committed changes to database")
 
-            response = ChatResponse(
+            return ChatResponse(
                 message=response_text,
                 conversation_id=conversation.id,
                 intent=assistant_message.intent,
                 context=conversation.context
             )
-            print("Debug: Created response object")
-            return response
 
         except Exception as e:
             print(f"Error in handle_chat: {str(e)}")
             db.rollback()
-            raise HTTPException(status_code=500, detail=f"Error processing message: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error processing message: {str(e)}"
+            )
 
     async def _get_or_create_conversation(
         self,
@@ -153,7 +147,9 @@ class ChatController:
         """Get existing conversation or create a new one."""
         try:
             if conversation_id:
-                conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+                conversation = db.query(Conversation).filter(
+                    Conversation.id == conversation_id
+                ).first()
                 if conversation:
                     return conversation
 

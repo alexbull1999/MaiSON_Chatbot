@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker
 from app.config import settings
 import logging
 import json
-import os
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -22,7 +21,13 @@ def get_connection_url():
     )
 
     # Build PostgreSQL connection URL
-    return f"postgresql://{settings.azure_postgres_user}:{settings.azure_postgres_password}@{settings.azure_postgres_host}:{settings.azure_postgres_port}/{settings.azure_postgres_db}"
+    return (
+        f"postgresql://{settings.azure_postgres_user}:"
+        f"{settings.azure_postgres_password}@"
+        f"{settings.azure_postgres_host}:"
+        f"{settings.azure_postgres_port}/"
+        f"{settings.azure_postgres_db}"
+    )
 
 # Create SQLAlchemy engine
 engine = create_engine(

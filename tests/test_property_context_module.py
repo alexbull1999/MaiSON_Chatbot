@@ -1,4 +1,3 @@
-import pytest
 from app.modules.property_context.property_context_module import PropertyContextModule, Property
 
 def test_property_context_initialization():

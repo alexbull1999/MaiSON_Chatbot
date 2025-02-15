@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-import sys
-import os
 import logging
+import sys
 from pathlib import Path
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Add the project root directory to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from app.database.db_connection import engine, Base, SessionLocal
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+from app.database.db_connection import engine, Base, SessionLocal
 
 def test_connection():
     """Test database connection and basic operations."""

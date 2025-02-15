@@ -2,6 +2,9 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+from app.database import Base, engine
+
 # Get the absolute path to the project root
 project_root = str(Path(__file__).parent.parent.absolute())
 
@@ -13,9 +16,6 @@ if project_root not in sys.path:
 app_path = os.path.join(project_root, "app")
 if app_path not in sys.path:
     sys.path.insert(0, app_path)
-
-import pytest
-from app.database import Base, engine
 
 @pytest.fixture(scope="session")
 def event_loop():

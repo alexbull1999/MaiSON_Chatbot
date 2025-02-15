@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import sys
-import os
+from datetime import datetime, timedelta
+from pathlib import Path
 
 # Add the project root directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
 
 from app.database import SessionLocal, engine, Base
 from app.database.models import Conversation, Message, ExternalReference
-from datetime import datetime, timedelta
 
 def seed_database():
     """Seed the database with sample data."""
@@ -46,7 +47,10 @@ def seed_database():
             Message(
                 conversation_id=conversation.id,
                 role="assistant",
-                content="Hello! I'd be happy to tell you about our downtown apartment. It's a modern luxury apartment with 2 bedrooms...",
+                content=(
+                    "Hello! I'd be happy to tell you about our downtown apartment. "
+                    "It's a modern luxury apartment with 2 bedrooms..."
+                ),
                 intent="property_inquiry",
                 message_metadata={"response_type": "property_details"},
                 created_at=datetime.utcnow() - timedelta(minutes=29)
@@ -93,6 +97,7 @@ def seed_database():
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_database() 
