@@ -116,4 +116,7 @@ class ChatResponse(BaseModel):
     message: str
     conversation_id: int
     intent: Optional[str] = None
-    context: Optional[Dict[str, Any]] = None 
+    context: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True  # This replaces orm_mode=True in Pydantic v2 

@@ -11,10 +11,13 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=[
+        "https://maisonfrontenddnsnamelabel.gbamb4drehf6cjdy.northeurope.azurecontainer.io",
+        "http://localhost:5137"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["POST", "GET"],  # Include GET for health checks
+    allow_headers=["Content-Type"],
 )
 
 # Include routers

@@ -1,0 +1,31 @@
+[flake8]
+max-line-length = 100
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    venv,
+    .env,
+    alembic/versions/*
+
+# Ignore specific errors
+ignore =
+    # Line break before binary operator
+    W503,
+    # Line break after binary operator
+    W504,
+    # Missing docstring in public module
+    D100,
+    # Missing docstring in public class
+    D101,
+    # Missing docstring in public method
+    D102,
+    # Missing docstring in public function
+    D103
+
+# Additional configurations
+max-complexity = 10
+statistics = True
+count = True 

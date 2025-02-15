@@ -7,13 +7,13 @@ def llm_client():
 
 def test_llm_client_initialization():
     client = LLMClient()
-    assert client.provider == LLMProvider.OPENAI
+    assert client.provider == LLMProvider.GEMINI
     
     client = LLMClient(provider=LLMProvider.ANTHROPIC)
     assert client.provider == LLMProvider.ANTHROPIC
     
-    client = LLMClient(provider=LLMProvider.GEMINI)
-    assert client.provider == LLMProvider.GEMINI
+    client = LLMClient(provider=LLMProvider.OPENAI)
+    assert client.provider == LLMProvider.OPENAI
 
 def test_system_prompt_generation():
     client = LLMClient()

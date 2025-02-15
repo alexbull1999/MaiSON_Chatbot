@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  chatbot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - AZURE_POSTGRES_HOST=db
+      - AZURE_POSTGRES_USER=pgadmin
+      - AZURE_POSTGRES_PASSWORD=MaiSON_AI
+      - AZURE_POSTGRES_DB=postgres
+      - AZURE_POSTGRES_PORT=5432
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=pgadmin
+      - POSTGRES_PASSWORD=MaiSON_AI
+      - POSTGRES_DB=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgadmin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data: 

@@ -50,32 +50,37 @@ class CommunicationModule:
         if not context:
             return self.format_message(MessageType.ERROR)
 
-        # Prepare conversation history for LLM
-        messages = []
-        
-        # Add conversation history if available
-        if "conversation_history" in context:
-            for msg in context["conversation_history"]:
-                messages.append({
-                    "role": "user" if msg["role"] == "user" else "assistant",
-                    "content": msg["content"]
-                })
-
-        # Add current query with intent and context
-        current_query = {
-            "role": "user",
-            "content": f"Intent: {intent}\nContext: {str(context)}\nPlease provide a response based on this information."
-        }
-        messages.append(current_query)
-
         try:
+            # Prepare conversation history for LLM
+            messages = []
+            
+            # Add conversation history if available
+            if "conversation_history" in context:
+                for msg in context["conversation_history"]:
+                    messages.append({
+                        "role": "user" if msg["role"] == "user" else "assistant",
+                        "content": msg["content"]
+                    })
+
+            # Add current query with intent and context
+            current_query = {
+                "role": "user",
+                "content": f"Intent: {intent}\nContext: {str(context)}\nPlease provide a response based on this information."
+            }
+            messages.append(current_query)
+
             # Generate response using LLM
-            llm_response = await self.llm_client.generate_response(
+            response = await self.llm_client.generate_response(
                 messages=messages,
                 temperature=0.7,  # Adjust based on need for creativity vs consistency
                 max_tokens=300    # Adjust based on desired response length
             )
-            return llm_response
+            
+            if not response:
+                return self.format_message(MessageType.ERROR)
+                
+            return response
+            
         except Exception as e:
             # Log the error and return a fallback response
             print(f"Error generating LLM response: {str(e)}")

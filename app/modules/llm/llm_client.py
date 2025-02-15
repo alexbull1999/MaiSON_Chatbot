@@ -8,46 +8,34 @@ from .prompts import SystemPrompts
 import os
 from functools import lru_cache
 from app.config import settings
+import time
+import random
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 class LLMClient:
-    def __init__(self, provider: LLMProvider = LLMProvider.OPENAI):
+    def __init__(self, provider: LLMProvider = LLMProvider.GEMINI, fallback_providers: List[LLMProvider] = None):
         self.provider = provider
-        self._setup_client()
+        self.fallback_providers = fallback_providers or [LLMProvider.OPENAI, LLMProvider.ANTHROPIC]
+        self.clients = {}
+        self._setup_clients()
 
-    def _setup_client(self):
-        """Initialize the appropriate LLM client based on provider."""
-        try:
-            if self.provider == LLMProvider.OPENAI:
-                api_key = settings.openai_api_key
-                if not api_key or api_key.startswith("sk-dummy"):
-                    print("Warning: Using mock responses as OpenAI API key is not configured")
-                    self.client = None
-                else:
-                    self.client = OpenAI(api_key=api_key)
-            elif self.provider == LLMProvider.ANTHROPIC:
-                api_key = settings.anthropic_api_key
-                if not api_key or api_key.startswith("sk-ant-dummy"):
-                    print("Warning: Using mock responses as Anthropic API key is not configured")
-                    self.client = None
-                else:
-                    self.client = anthropic.Anthropic(api_key=api_key)
-            elif self.provider == LLMProvider.GEMINI:
-                api_key = settings.google_api_key
-                # Debug: Print first and last 4 characters of the API key
-                if api_key:
-                    masked_key = f"{api_key[:4]}...{api_key[-4:]}"
-                    print(f"Debug: Found Google API key: {masked_key}")
-                
-                if not api_key or api_key == "dummy-key":
-                    print("Warning: Using mock responses as Google API key is not configured")
-                    self.client = None
-                else:
-                    genai.configure(api_key=api_key)
-                    self.client = genai.GenerativeModel('gemini-pro')
-                    print("Debug: Successfully configured Gemini client")
-        except Exception as e:
-            print(f"Warning: Error setting up LLM client ({str(e)}). Using mock responses.")
-            self.client = None
+    def _setup_clients(self):
+        """Initialize all available LLM clients."""
+        # Setup OpenAI
+        api_key = settings.openai_api_key
+        if api_key and not api_key.startswith("sk-dummy"):
+            self.clients[LLMProvider.OPENAI] = OpenAI(api_key=api_key)
+
+        # Setup Anthropic
+        api_key = settings.anthropic_api_key
+        if api_key and not api_key.startswith("sk-ant-dummy"):
+            self.clients[LLMProvider.ANTHROPIC] = anthropic.Anthropic(api_key=api_key)
+
+        # Setup Gemini
+        api_key = settings.google_api_key
+        if api_key and api_key != "dummy-key":
+            genai.configure(api_key=api_key)
+            self.clients[LLMProvider.GEMINI] = genai.GenerativeModel('gemini-pro')
 
     def _get_mock_response(self, messages: List[Dict[str, str]]) -> str:
         """Generate a mock response for testing purposes."""
@@ -71,6 +59,7 @@ class LLMClient:
         """Get the appropriate system prompt for the current provider."""
         return SystemPrompts.get_prompt(self.provider)
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def generate_response(
         self,
         messages: List[Dict[str, str]],
@@ -78,31 +67,58 @@ class LLMClient:
         max_tokens: int = 500
     ) -> str:
         """
-        Generate a response using the configured LLM provider.
-        
-        Args:
-            messages: List of message dictionaries with 'role' and 'content'
-            temperature: Controls randomness (0.0 to 1.0)
-            max_tokens: Maximum length of the response
-            
-        Returns:
-            Generated response text
+        Generate a response using available LLM providers with retry logic and fallback.
         """
-        try:
-            # If no client is available, use mock responses
-            if self.client is None:
-                return self._get_mock_response(messages)
+        # Try primary provider first
+        if self.provider in self.clients:
+            try:
+                response = await self._generate_with_provider(
+                    self.provider,
+                    messages,
+                    temperature,
+                    max_tokens
+                )
+                if response:
+                    return response
+            except Exception as e:
+                print(f"Error with primary provider {self.provider}: {str(e)}")
 
-            if self.provider == LLMProvider.OPENAI:
-                return await self._generate_openai_response(messages, temperature, max_tokens)
-            elif self.provider == LLMProvider.ANTHROPIC:
-                return await self._generate_anthropic_response(messages, temperature, max_tokens)
-            elif self.provider == LLMProvider.GEMINI:
-                return await self._generate_gemini_response(messages, temperature, max_tokens)
-        except Exception as e:
-            # Log the error and return a fallback response
-            print(f"Error generating LLM response: {str(e)}")
-            return self._get_mock_response(messages)
+        # Try fallback providers
+        for provider in self.fallback_providers:
+            if provider in self.clients:
+                try:
+                    print(f"Trying fallback provider: {provider}")
+                    response = await self._generate_with_provider(
+                        provider,
+                        messages,
+                        temperature,
+                        max_tokens
+                    )
+                    if response:
+                        return response
+                except Exception as e:
+                    print(f"Error with fallback provider {provider}: {str(e)}")
+                    continue
+
+        # If all providers fail, use mock response
+        return self._get_mock_response(messages)
+
+    async def _generate_with_provider(
+        self,
+        provider: LLMProvider,
+        messages: List[Dict[str, str]],
+        temperature: float,
+        max_tokens: int
+    ) -> str:
+        """Generate response using a specific provider."""
+        if provider == LLMProvider.OPENAI:
+            return await self._generate_openai_response(messages, temperature, max_tokens)
+        elif provider == LLMProvider.ANTHROPIC:
+            return await self._generate_anthropic_response(messages, temperature, max_tokens)
+        elif provider == LLMProvider.GEMINI:
+            return await self._generate_gemini_response(messages, temperature, max_tokens)
+        
+        raise ValueError(f"Unsupported provider: {provider}")
 
     async def _generate_openai_response(
         self,
@@ -118,7 +134,7 @@ class LLMClient:
                 "content": self.get_system_prompt()
             })
 
-        response = await self.client.chat.completions.create(
+        response = await self.clients[LLMProvider.OPENAI].chat.completions.create(
             model="gpt-4-turbo-preview",  # or gpt-3.5-turbo for lower cost
             messages=messages,
             temperature=temperature,
@@ -143,7 +159,7 @@ class LLMClient:
             elif msg["role"] == "assistant":
                 formatted_messages.append({"role": "assistant", "content": msg["content"]})
 
-        response = await self.client.messages.create(
+        response = await self.clients[LLMProvider.ANTHROPIC].messages.create(
             model="claude-3-opus-20240229",
             max_tokens=max_tokens,
             temperature=temperature,
@@ -177,13 +193,11 @@ class LLMClient:
             
             print(f"Debug: Sending request to Gemini API with prompt: {final_prompt}")
             
-            # Use synchronous API
-            response = self.client.generate_content(
+            # Use synchronous API with async wrapper
+            response = await self._run_sync_gemini(
                 final_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                )
+                temperature,
+                max_tokens
             )
             
             if not response or not response.text:
@@ -195,4 +209,19 @@ class LLMClient:
             
         except Exception as e:
             print(f"Error in Gemini API call: {str(e)}")
-            return self._get_mock_response(messages) 
+            return self._get_mock_response(messages)
+
+    async def _run_sync_gemini(self, prompt: str, temperature: float, max_tokens: int):
+        """Run Gemini's synchronous API in an async context."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.clients[LLMProvider.GEMINI].generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                )
+            )
+        ) 

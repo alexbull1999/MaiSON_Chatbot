@@ -17,6 +17,14 @@ class ChatRequest(BaseModel):
     seller_id: Optional[str] = None
     conversation_id: Optional[int] = None
 
+class ChatMessageRequest(BaseModel):
+    message: str
+    sessionId: Optional[str] = None
+
+class ChatMessageResponse(BaseModel):
+    message: str
+    sessionId: str
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(
     request: ChatRequest,
@@ -86,4 +94,38 @@ async def get_user_conversations(
             "context": conv.context
         }
         for conv in conversations
-    ] 
+    ]
+
+@router.post("/chat/message", response_model=ChatMessageResponse)
+async def chat_message(
+    request: ChatMessageRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Handle chat messages from the frontend.
+    
+    This endpoint:
+    1. Accepts a message and optional sessionId
+    2. Processes the message using the chat controller
+    3. Returns the AI response and a sessionId for conversation tracking
+    """
+    try:
+        # Convert sessionId to conversation_id if provided
+        conversation_id = int(request.sessionId) if request.sessionId else None
+        
+        # Process the chat request
+        response = await chat_controller.handle_chat(
+            message=request.message,
+            user_id="frontend_user",  # Default user ID for frontend users
+            user_name="Website Visitor",
+            user_email="visitor@example.com",
+            conversation_id=conversation_id,
+            db=db
+        )
+        
+        return ChatMessageResponse(
+            message=response.message,
+            sessionId=str(response.conversation_id)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
