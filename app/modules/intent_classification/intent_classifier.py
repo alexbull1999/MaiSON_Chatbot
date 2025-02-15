@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Optional
+from typing import List
 from ..llm import LLMClient, LLMProvider
 
 class Intent(Enum):
@@ -22,47 +22,56 @@ class IntentClassifier:
     def __init__(self):
         self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
         self._intent_descriptions = {
-            Intent.PROPERTY_INQUIRY: "Questions about property details, features, or specifications",
-            Intent.AVAILABILITY_AND_BOOKING_REQUEST: "Questions about property availability, viewing times, or scheduling a viewing",
-            Intent.PRICE_INQUIRY: "Questions about property prices, costs, or financial aspects",
-            Intent.SELLER_MESSAGE: "Requests to contact or communicate with the property seller",
-            Intent.GENERAL_QUESTION: "General questions about buying or selling properties, unrelated to one of the above categories",
-            Intent.UNKNOWN: "Messages that don't clearly fit into other categories"
+            Intent.PROPERTY_INQUIRY: (
+                "Questions about property details, features, or specifications"
+            ),
+            Intent.AVAILABILITY_AND_BOOKING_REQUEST: (
+                "Questions about property availability, viewing times, or scheduling"
+            ),
+            Intent.PRICE_INQUIRY: (
+                "Questions about property prices, costs, or financial aspects"
+            ),
+            Intent.SELLER_MESSAGE: (
+                "Requests to contact or communicate with the property seller"
+            ),
+            Intent.GENERAL_QUESTION: (
+                "General questions about buying or selling properties"
+            ),
+            Intent.UNKNOWN: (
+                "Messages that don't clearly fit into other categories"
+            )
         }
 
     def _get_classification_prompt(self) -> str:
         """Generate the prompt for intent classification."""
-        prompt = """You are an intent classifier for a real estate chatbot. Your task is to classify user messages into one of the following intents:
-
-Available Intents:
-"""
+        prompt = (
+            "You are an intent classifier for a real estate chatbot. "
+            "Your task is to classify user messages into one of the following intents:\n\n"
+            "Available Intents:\n"
+        )
+        
         # Add descriptions for each intent
         for intent, description in self._intent_descriptions.items():
             prompt += f"- {intent.value}: {description}\n"
 
-        prompt += """
-Instructions:
-1. Analyze the user's message carefully
-2. Consider the context and implied meaning
-3. Return ONLY the intent name (e.g., "property_inquiry") without any additional text or explanation
-4. If unsure, return "unknown"
-
-Example classifications:
-- "What are the features of this house?" -> "property_inquiry"
-- "When can I view the apartment?" -> "availability_and_booking_request"
-- "I want to book a viewing" -> "availability_and_booking_request"
-- "How much does it cost?" -> "price_inquiry"
-- "Can you ask the seller about parking?" -> "seller_message"
-- "Hello" -> "unknown"
-- "What are good areas to live in London?" -> "general_question"
-Classify the following message:
-"""
+        prompt += (
+            "\nInstructions:\n"
+            "1. Analyze the user's message carefully\n"
+            "2. Consider the context and implied meaning\n"
+            "3. Return ONLY the intent name without any additional text\n"
+            "4. If unsure, return \"unknown\"\n\n"
+            "Example classifications:\n"
+            "- \"What are the features of this house?\" -> \"property_inquiry\"\n"
+            "- \"When can I view the apartment?\" -> \"availability_and_booking_request\"\n"
+            "- \"How much does it cost?\" -> \"price_inquiry\"\n"
+            "- \"Can you ask the seller about parking?\" -> \"seller_message\"\n"
+            "- \"What are good areas to live in London?\" -> \"general_question\"\n"
+            "Classify the following message:\n"
+        )
         return prompt
 
     async def classify(self, message: str) -> Intent:
-        """
-        Classify the intent of a given message using LLM.
-        """
+        """Classify the intent of a given message using LLM."""
         try:
             # Prepare the full prompt
             prompt = self._get_classification_prompt()

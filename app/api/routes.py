@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.database.schemas import ChatResponse
+from app.database.models import Conversation
 from .controllers import chat_controller
 from pydantic import BaseModel
 

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 from enum import Enum
 from ..llm import LLMClient, LLMProvider
 
@@ -25,10 +25,7 @@ class CommunicationModule:
         self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
 
     def format_message(self, message_type: MessageType, **kwargs) -> str:
-        """
-        Format a message based on the message type and provided parameters.
-        This is a synchronous method as it doesn't involve any I/O operations.
-        """
+        """Format a message based on the message type and provided parameters."""
         templates = self.templates.get(message_type, [])
         if not templates:
             return "I apologize, but I'm not sure how to respond to that."
@@ -36,17 +33,15 @@ class CommunicationModule:
         template = templates[0]  # Use first template for now
         try:
             return template.format(**kwargs)
-        except KeyError as e:
-            print(f"Error formatting message: Missing key {str(e)}")
+        except KeyError:
+            print(f"Error formatting message: Missing required parameters")
             return template
-        except Exception as e:
-            print(f"Error formatting message: {str(e)}")
+        except Exception:
+            print(f"Error formatting message")
             return "I apologize, but I couldn't format the response correctly."
 
     async def generate_response(self, intent: str, context: dict) -> str:
-        """
-        Generate a response based on the intent and context using the LLM.
-        """
+        """Generate a response based on the intent and context using the LLM."""
         if not context:
             return self.format_message(MessageType.ERROR)
 
@@ -65,15 +60,19 @@ class CommunicationModule:
             # Add current query with intent and context
             current_query = {
                 "role": "user",
-                "content": f"Intent: {intent}\nContext: {str(context)}\nPlease provide a response based on this information."
+                "content": (
+                    f"Intent: {intent}\n"
+                    f"Context: {str(context)}\n"
+                    "Please provide a response based on this information."
+                )
             }
             messages.append(current_query)
 
             # Generate response using LLM
             response = await self.llm_client.generate_response(
                 messages=messages,
-                temperature=0.7,  # Adjust based on need for creativity vs consistency
-                max_tokens=300    # Adjust based on desired response length
+                temperature=0.7,
+                max_tokens=300
             )
             
             if not response:
@@ -81,9 +80,9 @@ class CommunicationModule:
                 
             return response
             
-        except Exception as e:
+        except Exception:
             # Log the error and return a fallback response
-            print(f"Error generating LLM response: {str(e)}")
+            print("Error generating LLM response")
             return f"I understand you're interested in {intent}. Let me help you with that."
 
     async def generate_property_description(self, property_data: Dict) -> str:

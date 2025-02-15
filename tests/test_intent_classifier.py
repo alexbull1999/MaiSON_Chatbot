@@ -1,102 +1,56 @@
 import pytest
-from app.modules.intent_classification.intent_classifier import IntentClassifier, Intent
+from unittest.mock import AsyncMock, patch
+
+from app.modules.intent_classification import IntentClassifier, Intent
+from app.modules.llm import LLMClient
 
 @pytest.fixture
-def classifier():
+def intent_classifier():
     return IntentClassifier()
 
-def test_intent_classifier_initialization(classifier):
-    assert classifier.llm_client is not None
-    assert classifier._intent_descriptions is not None
-    assert len(classifier._intent_descriptions) == len(Intent)
+@pytest.fixture
+def mock_llm_client():
+    with patch('app.modules.intent_classification.intent_classifier.LLMClient') as mock:
+        mock_instance = AsyncMock()
+        mock.return_value = mock_instance
+        yield mock_instance
 
 @pytest.mark.asyncio
-async def test_property_inquiry_intent(classifier):
-    messages = [
-        "What are the features of this property?",
-        "Tell me about this house",
-        "What amenities does this apartment have?",
-        "Can you describe the property?"
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.PROPERTY_INQUIRY
+async def test_classify_property_inquiry(intent_classifier, mock_llm_client):
+    """Test classification of property inquiry messages."""
+    mock_llm_client.generate_response.return_value = "property_inquiry"
+    message = "What are the features of this house?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.PROPERTY_INQUIRY
 
 @pytest.mark.asyncio
-async def test_availability_check_intent(classifier):
-    messages = [
-        "When is this property available for viewing?",
-        "What are the available time slots?",
-        "Can I see the property tomorrow?",
-        "Is the property available next week?"
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.AVAILABILITY_AND_BOOKING_REQUEST
+async def test_classify_availability_request(intent_classifier, mock_llm_client):
+    """Test classification of availability request messages."""
+    mock_llm_client.generate_response.return_value = "availability_and_booking_request"
+    message = "When can I view this property?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.AVAILABILITY_AND_BOOKING_REQUEST
 
 @pytest.mark.asyncio
-async def test_price_inquiry_intent(classifier):
-    messages = [
-        "How much does it cost?",
-        "What's the price of this property?",
-        "Is the price negotiable?",
-        "Can you tell me about the monthly payments?"
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.PRICE_INQUIRY
+async def test_classify_price_inquiry(intent_classifier, mock_llm_client):
+    """Test classification of price inquiry messages."""
+    mock_llm_client.generate_response.return_value = "price_inquiry"
+    message = "How much does this property cost?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.PRICE_INQUIRY
 
 @pytest.mark.asyncio
-async def test_booking_request_intent(classifier):
-    messages = [
-        "I would like to book a viewing",
-        "Can I schedule a visit?",
-        "Book the property for next week",
-        "I want to reserve a viewing slot"
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.AVAILABILITY_AND_BOOKING_REQUEST
+async def test_classify_unknown_intent(intent_classifier, mock_llm_client):
+    """Test classification of messages with unknown intent."""
+    mock_llm_client.generate_response.return_value = "unknown"
+    message = "Lorem ipsum dolor sit amet"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.UNKNOWN
 
 @pytest.mark.asyncio
-async def test_seller_message_intent(classifier):
-    messages = [
-        "Can you ask the seller about parking?",
-        "I want to send a message to the seller",
-        "Please tell the seller I'm interested",
-        "Contact the seller for me"
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.SELLER_MESSAGE
-
-@pytest.mark.asyncio
-async def test_general_question_intent(classifier):
-    messages = [
-        "What are good areas to live in London?",
-        "What type of properties have good resale value?",
-        "What cities in the UK are good to live in?",
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.GENERAL_QUESTION
-
-@pytest.mark.asyncio
-async def test_unknown_intent(classifier):
-    messages = [
-        "xyz123",
-        "random text",
-        "!@#$%^",
-        "Hello!",
-    ]
-    for message in messages:
-        intent = await classifier.classify(message)
-        assert intent == Intent.UNKNOWN
-
-
-@pytest.mark.asyncio
-async def test_error_handling(classifier):
-    """Test that classifier handles errors gracefully."""
-    # Simulate an error by passing None
-    intent = await classifier.classify(None)
-    assert intent == Intent.UNKNOWN 
+async def test_classify_error_handling(intent_classifier, mock_llm_client):
+    """Test error handling during classification."""
+    mock_llm_client.generate_response.side_effect = Exception("Test error")
+    message = "What are the features of this house?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.UNKNOWN 

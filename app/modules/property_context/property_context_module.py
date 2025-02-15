@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+from ..llm import LLMClient, LLMProvider
 
 class Property:
     def __init__(self, id: str, name: str, type: str, location: str):
@@ -8,9 +9,12 @@ class Property:
         self.location = location
 
 class PropertyContextModule:
+    """Module for handling property-specific queries and context."""
+    
     def __init__(self):
         self.properties: Dict[str, Property] = {}
         self.current_property: Optional[Property] = None
+        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
 
     def add_property(self, property: Property):
         """Add a property to the context."""
@@ -33,4 +37,88 @@ class PropertyContextModule:
 
     def clear_current_property(self):
         """Clear the current property context."""
-        self.current_property = None 
+        self.current_property = None
+
+    async def handle_inquiry(
+        self,
+        message: str,
+        context: Optional[Dict] = None
+    ) -> str:
+        """Handle property-specific inquiries."""
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a real estate agent. Provide detailed "
+                            "information about property features and specifications."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7
+            )
+            return response
+        except Exception as e:
+            print(f"Error in property context module: {str(e)}")
+            return (
+                "I apologize, but I'm having trouble processing your request. "
+                "Please try again or rephrase your question."
+            )
+
+    async def handle_booking(
+        self,
+        message: str,
+        context: Optional[Dict] = None
+    ) -> str:
+        """Handle property viewing and booking requests."""
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a booking assistant. Help users schedule "
+                            "property viewings and manage appointments."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7
+            )
+            return response
+        except Exception as e:
+            print(f"Error in booking handler: {str(e)}")
+            return (
+                "I apologize, but I'm having trouble with the booking request. "
+                "Please try again later or contact our office directly."
+            )
+
+    async def handle_pricing(
+        self,
+        message: str,
+        context: Optional[Dict] = None
+    ) -> str:
+        """Handle property pricing inquiries."""
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a pricing specialist. Provide accurate "
+                            "information about property prices and market values."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7
+            )
+            return response
+        except Exception as e:
+            print(f"Error in pricing handler: {str(e)}")
+            return (
+                "I apologize, but I'm having trouble retrieving pricing information. "
+                "Please try again or contact our office for detailed pricing."
+            ) 

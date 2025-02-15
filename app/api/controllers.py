@@ -1,13 +1,13 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.database import get_db
-from app.database.models import Conversation, Message, ExternalReference
+from app.database.models import Conversation, Message
 from app.modules.message_router import MessageRouter
 from app.modules.intent_classification.intent_classifier import Intent
-from app.database.schemas import ConversationCreate, MessageCreate, ChatResponse
+from app.database.schemas import ChatResponse
 
 class ChatController:
     def __init__(self):

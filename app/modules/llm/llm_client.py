@@ -1,21 +1,23 @@
-from typing import List, Dict, Optional
-import openai
-from openai import OpenAI
+from typing import List, Dict
 import anthropic
 import google.generativeai as genai
+from openai import OpenAI
 from .types import LLMProvider
 from .prompts import SystemPrompts
-import os
 from functools import lru_cache
 from app.config import settings
-import time
-import random
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 class LLMClient:
-    def __init__(self, provider: LLMProvider = LLMProvider.GEMINI, fallback_providers: List[LLMProvider] = None):
+    def __init__(
+        self,
+        provider: LLMProvider = LLMProvider.GEMINI,
+        fallback_providers: List[LLMProvider] = None
+    ):
         self.provider = provider
-        self.fallback_providers = fallback_providers or [LLMProvider.OPENAI, LLMProvider.ANTHROPIC]
+        self.fallback_providers = (
+            fallback_providers or [LLMProvider.OPENAI, LLMProvider.ANTHROPIC]
+        )
         self.clients = {}
         self._setup_clients()
 
@@ -44,31 +46,44 @@ class LLMClient:
         except KeyError:
             return "I apologize, I didn't understand that message format."
 
-        
-        if "property" in last_message or "house" in last_message or "apartment" in last_message:
-            return "This is a beautiful property with 3 bedrooms, 2 bathrooms, and a modern kitchen. It's located in a great neighborhood with easy access to public transportation."
+        if "property" in last_message or "house" in last_message:
+            return (
+                "This is a beautiful property with 3 bedrooms, 2 bathrooms, "
+                "and a modern kitchen. It's located in a great neighborhood "
+                "with easy access to public transportation."
+            )
         elif "price" in last_message or "cost" in last_message:
-            return "The property is priced at $2,500 per month, which is competitive for this area. This includes basic utilities and maintenance."
+            return (
+                "The property is priced at $2,500 per month, which is competitive "
+                "for this area. This includes basic utilities and maintenance."
+            )
         elif "available" in last_message or "when" in last_message:
-            return "The property is available for viewing this week. We have slots available on Wednesday afternoon and Friday morning."
+            return (
+                "The property is available for viewing this week. We have slots "
+                "available on Wednesday afternoon and Friday morning."
+            )
         else:
-            return "I'm here to help you with any questions about our properties. What would you like to know?"
+            return (
+                "I'm here to help you with any questions about our properties. "
+                "What would you like to know?"
+            )
 
     @lru_cache(maxsize=1)
     def get_system_prompt(self) -> str:
         """Get the appropriate system prompt for the current provider."""
         return SystemPrompts.get_prompt(self.provider)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
     async def generate_response(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 500
     ) -> str:
-        """
-        Generate a response using available LLM providers with retry logic and fallback.
-        """
+        """Generate a response using available LLM providers with retry logic and fallback."""
         # Try primary provider first
         if self.provider in self.clients:
             try:
@@ -112,11 +127,17 @@ class LLMClient:
     ) -> str:
         """Generate response using a specific provider."""
         if provider == LLMProvider.OPENAI:
-            return await self._generate_openai_response(messages, temperature, max_tokens)
+            return await self._generate_openai_response(
+                messages, temperature, max_tokens
+            )
         elif provider == LLMProvider.ANTHROPIC:
-            return await self._generate_anthropic_response(messages, temperature, max_tokens)
+            return await self._generate_anthropic_response(
+                messages, temperature, max_tokens
+            )
         elif provider == LLMProvider.GEMINI:
-            return await self._generate_gemini_response(messages, temperature, max_tokens)
+            return await self._generate_gemini_response(
+                messages, temperature, max_tokens
+            )
         
         raise ValueError(f"Unsupported provider: {provider}")
 
