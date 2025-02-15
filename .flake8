@@ -24,6 +24,15 @@ ignore =
     D102,
     # Missing docstring in public function
     D103
+    #Trailing whitespace
+    W291
+    #Expecting 2 blank lines
+    E302
+    #blank line containing whitespace
+    W293
+    #No newline at end of file
+    W292
+
 
 # Additional configurations
 max-complexity = 10
