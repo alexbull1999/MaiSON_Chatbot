@@ -83,7 +83,11 @@ class ChatController:
             try:
                 # Generate response using message router
                 print("Debug: Generating response using message router")
-                response_text = await self.message_router.process_message(message)
+                response_text = await self.message_router.process_message(
+                    message=message,
+                    db=db,
+                    context=context
+                )
                 print(f"Debug: Generated response: {response_text[:100]}...")
             except Exception as e:
                 print(f"Error generating response: {str(e)}")

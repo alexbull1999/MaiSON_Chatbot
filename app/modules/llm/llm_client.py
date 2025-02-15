@@ -51,7 +51,11 @@ class LLMClient:
 
     def _get_mock_response(self, messages: List[Dict[str, str]]) -> str:
         """Generate a mock response for testing purposes."""
-        last_message = messages[-1]["content"].lower()
+        try:
+            last_message = messages[-1]["content"].lower()
+        except KeyError:
+            return "I apologize, I didn't understand that message format."
+
         
         if "property" in last_message or "house" in last_message or "apartment" in last_message:
             return "This is a beautiful property with 3 bedrooms, 2 bathrooms, and a modern kitchen. It's located in a great neighborhood with easy access to public transportation."

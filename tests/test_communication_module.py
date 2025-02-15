@@ -35,10 +35,12 @@ def test_format_message_with_params():
     assert "Test Property" in message
     assert "Test Location" in message
 
-def test_generate_response():
+@pytest.mark.asyncio
+async def test_generate_response():
     comm = CommunicationModule()
     context = {"property_id": "123"}
-    response = comm.generate_response("property_inquiry", context)
+    response = await comm.generate_response("property_inquiry", context)
     assert isinstance(response, str)
     assert len(response) > 0
-    assert "property_inquiry" in response.lower() 
+    assert "property" in response.lower() 
+    assert "details" in response.lower() or "information" in response.lower()

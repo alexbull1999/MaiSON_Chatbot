@@ -14,13 +14,21 @@ def setup_logging(log_level=logging.INFO):
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    # Configure file handler
+    # Configure file handler for general logs
     file_handler = RotatingFileHandler(
         log_dir / "chatbot.log",
         maxBytes=10485760,  # 10MB
         backupCount=5
     )
     file_handler.setFormatter(log_format)
+
+    # Configure file handler for database logs
+    db_handler = RotatingFileHandler(
+        log_dir / "database.log",
+        maxBytes=10485760,  # 10MB
+        backupCount=5
+    )
+    db_handler.setFormatter(log_format)
 
     # Configure console handler
     console_handler = logging.StreamHandler()
@@ -30,8 +38,17 @@ def setup_logging(log_level=logging.INFO):
     logger = logging.getLogger()
     logger.setLevel(log_level)
 
-    # Add handlers
+    # Get SQL Alchemy logger
+    sql_logger = logging.getLogger('sqlalchemy.engine')
+    sql_logger.setLevel(logging.INFO)  # Set to logging.DEBUG for query logging
+    sql_logger.addHandler(db_handler)
+
+    # Add handlers to root logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
+    # Log startup message
+    logger.info("Starting maiSON Chatbot application")
+    logger.info("Database logging configured")
 
     return logger 

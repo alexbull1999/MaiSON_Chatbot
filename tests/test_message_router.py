@@ -11,14 +11,16 @@ def test_message_router_initialization():
     assert router.advisory_module is not None
     assert router.communication_module is not None
 
-def test_process_message():
+@pytest.mark.asyncio
+async def test_process_message():
     router = MessageRouter()
     message = "Tell me about this property"
-    response = router.process_message(message)
+    response = await router.process_message(message)
     assert isinstance(response, str)
     assert len(response) > 0
 
-def test_route_intent_property_inquiry():
+@pytest.mark.asyncio
+async def test_route_intent_property_inquiry():
     router = MessageRouter()
     # Set up a test property
     test_property = Property(
@@ -30,7 +32,7 @@ def test_route_intent_property_inquiry():
     router.property_context.add_property(test_property)
     router.property_context.set_current_property("123")
     
-    response = router._route_intent(
+    response = await router._route_intent(
         Intent.PROPERTY_INQUIRY,
         "Tell me about this property",
         {}
@@ -39,7 +41,8 @@ def test_route_intent_property_inquiry():
     assert "Property Type: Apartment" in response
     assert "Location: Test Location" in response
 
-def test_route_intent_price_inquiry():
+@pytest.mark.asyncio
+async def test_route_intent_price_inquiry():
     router = MessageRouter()
     # Set up a test property
     test_property = Property(
@@ -51,7 +54,7 @@ def test_route_intent_price_inquiry():
     router.property_context.add_property(test_property)
     router.property_context.set_current_property("123")
     
-    response = router._route_intent(
+    response = await router._route_intent(
         Intent.PRICE_INQUIRY,
         "How much does it cost?",
         {}

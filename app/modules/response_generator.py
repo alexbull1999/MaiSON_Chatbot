@@ -5,7 +5,7 @@ class ResponseGenerator:
     def __init__(self):
         self.communication_module = CommunicationModule()
 
-    def generate_response(self, 
+    async def generate_response(self, 
                          intent: str, 
                          context: dict, 
                          property_data: Optional[Dict] = None,
@@ -22,14 +22,14 @@ class ResponseGenerator:
             )
 
         # Generate main response based on available data
-        main_response = self._generate_main_response(intent, context, property_data, market_data)
+        main_response = await self._generate_main_response(intent, context, property_data, market_data)
         if main_response:
             response_parts.append(main_response)
 
         # Combine all parts
         return "\n".join(filter(None, response_parts))
 
-    def _generate_main_response(self,
+    async def _generate_main_response(self,
                               intent: str,
                               context: dict,
                               property_data: Optional[Dict],
@@ -42,7 +42,7 @@ class ResponseGenerator:
         elif market_data:
             return self._format_market_response(market_data)
         else:
-            return self.communication_module.generate_response(intent, context)
+            return await self.communication_module.generate_response(intent, context)
 
     def _format_property_response(self, property_data: Dict, intent: str) -> str:
         """Format property-related response."""

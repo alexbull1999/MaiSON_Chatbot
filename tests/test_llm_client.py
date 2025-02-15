@@ -19,7 +19,7 @@ def test_system_prompt_generation():
     client = LLMClient()
     prompt = client.get_system_prompt()
     assert isinstance(prompt, str)
-    assert "maiSON" in prompt
+    assert "MaiSON" in prompt
     assert "real estate" in prompt.lower()
 
 @pytest.mark.asyncio
@@ -54,7 +54,7 @@ def test_provider_specific_prompts():
         prompt = SystemPrompts.get_prompt(provider)
         assert isinstance(prompt, str)
         assert len(prompt) > 0
-        assert "maiSON" in prompt
+        assert "MaiSON" in prompt
         
         # Check for provider-specific instructions
         if provider == LLMProvider.OPENAI:
