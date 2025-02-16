@@ -47,7 +47,10 @@ class PropertyContextModule:
         """Handle property-specific inquiries."""
         try:
             if not self.current_property:
-                return "I don't have any property selected to provide information about. Could you specify which property you're interested in?"
+                return (
+                    "I don't have any property selected to provide information about. "
+                    "Could you specify which property you're interested in?"
+                )
 
             property_details = {
                 "type": self.current_property.type,
@@ -119,7 +122,7 @@ class PropertyContextModule:
         """Handle property pricing inquiries."""
         try:
             if not self.current_property:
-                return "I don't have any property selected to provide pricing information about. Could you specify which property you're interested in?"
+                return "I don't have any property selected to provide pricing information about. Please specify which property you're interested in?"
 
             property_details = {
                 "type": self.current_property.type,

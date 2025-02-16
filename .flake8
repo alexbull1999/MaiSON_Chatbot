@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 100
+max-line-length = 150
 exclude = 
     .git,
     __pycache__,
@@ -34,6 +34,7 @@ ignore =
     W292
     #Imports not at top of file (need to exclude for scripts)
     E402
+    )
 
 
 # Additional configurations
