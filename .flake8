@@ -34,7 +34,7 @@ ignore =
     W292
     #Imports not at top of file (need to exclude for scripts)
     E402
-    )
+    
 
 
 # Additional configurations
