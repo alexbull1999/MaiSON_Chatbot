@@ -150,7 +150,5 @@ class CommunicationModule:
             )
         except Exception:
             # Fallback to basic description
-            return (
-                f"This is a {property_data.get('type', 'property')} located "
-                f"in {property_data.get('location', 'the area')}." 
-                )
+            return f"This is a {property_data.get('type', 'property')} located in {property_data.get('location', 'the area')}." 
+                
