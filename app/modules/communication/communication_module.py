@@ -139,7 +139,10 @@ class CommunicationModule:
         """
         prompt = {
             "role": "user",
-            "content": f"Please generate a natural, engaging description of this property:\n{str(property_data)}"
+            "content": (
+                f"Please generate a natural, engaging description of this property:\n
+                f"{str(property_data)}"
+                )
         }
         
         try:
@@ -148,6 +151,9 @@ class CommunicationModule:
                 temperature=0.7,
                 max_tokens=200
             )
-        except Exception as e:
+        except Exception:
             # Fallback to basic description
-            return f"This is a {property_data.get('type', 'property')} located in {property_data.get('location', 'the area')}." 
+            return (
+                f"This is a {property_data.get('type', 'property')} located "
+                f"in {property_data.get('location', 'the area')}." 
+                )

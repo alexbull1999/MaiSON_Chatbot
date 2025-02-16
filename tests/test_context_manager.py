@@ -1,4 +1,3 @@
-import pytest
 from app.modules.context_manager.context_manager import ContextManager
 
 def test_context_manager_initialization():

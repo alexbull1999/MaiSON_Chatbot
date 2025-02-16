@@ -204,4 +204,5 @@ class ChatController:
         conversation.context = context
 
 # Initialize controller
-chat_controller = ChatController() 
+chat_controller = ChatController()
+

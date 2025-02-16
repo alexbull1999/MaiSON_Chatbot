@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict, Optional
 from ..llm import LLMClient, LLMProvider
 
 class Intent(Enum):

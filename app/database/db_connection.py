@@ -29,6 +29,7 @@ def get_connection_url():
         f"{settings.azure_postgres_db}"
     )
 
+
 # Create SQLAlchemy engine
 engine = create_engine(
     get_connection_url(),
@@ -37,6 +38,7 @@ engine = create_engine(
     pool_size=10,  # Adjust based on workload
     max_overflow=20  # Allow extra connections if needed
 )
+
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
