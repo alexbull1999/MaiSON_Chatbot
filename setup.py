@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name="maison-chatbot",
     version="0.1.0",
-    packages=find_packages(include=['app', 'app.*']),
+    packages=find_packages(),
+    include_package_data=True,
     install_requires=[
         "fastapi",
         "uvicorn",
@@ -16,5 +17,13 @@ setup(
         "anthropic",
         "google-generativeai",
     ],
+    extras_require={
+        "test": [
+            "pytest",
+            "pytest-asyncio",
+            "pytest-cov",
+            "httpx",
+        ],
+    },
     python_requires=">=3.11",
 )
