@@ -140,7 +140,7 @@ class CommunicationModule:
         prompt = {
             "role": "user",
             "content": (
-                f"Please generate a natural, engaging description of this property:\n
+                f"Please generate a natural, engaging description of this property:\n"
                 f"{str(property_data)}"
                 )
         }

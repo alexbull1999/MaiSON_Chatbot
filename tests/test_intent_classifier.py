@@ -1,8 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-
 from app.modules.intent_classification import IntentClassifier, Intent
-from app.modules.llm import LLMClient
 
 @pytest.fixture
 def intent_classifier():
