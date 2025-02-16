@@ -16,6 +16,7 @@ setup(
         "openai",
         "anthropic",
         "google-generativeai",
+        "tenacity",
     ],
     extras_require={
         "test": [
