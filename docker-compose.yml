@@ -6,11 +6,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AZURE_POSTGRES_HOST=db
-      - AZURE_POSTGRES_USER=pgadmin
-      - AZURE_POSTGRES_PASSWORD=MaiSON_AI
-      - AZURE_POSTGRES_DB=postgres
-      - AZURE_POSTGRES_PORT=5432
+      - AZURE_POSTGRES_HOST=${AZURE_POSTGRES_HOST:-db}
+      - AZURE_POSTGRES_USER=${AZURE_POSTGRES_USER}
+      - AZURE_POSTGRES_PASSWORD=${AZURE_POSTGRES_PASSWORD}
+      - AZURE_POSTGRES_DB=${AZURE_POSTGRES_DB}
+      - AZURE_POSTGRES_PORT=${AZURE_POSTGRES_PORT:-5432}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -33,13 +33,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=pgadmin
-      - POSTGRES_PASSWORD=MaiSON_AI
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=${AZURE_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${AZURE_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${AZURE_POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pgadmin -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${AZURE_POSTGRES_USER} -d ${AZURE_POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

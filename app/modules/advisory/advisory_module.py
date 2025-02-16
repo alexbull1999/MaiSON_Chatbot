@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from app.modules.property_context.property_context_module import Property
 
 class AdvisoryModule:
@@ -35,4 +35,24 @@ class AdvisoryModule:
             "market_trend": "Stable",
             "average_price": "Contact for details",
             "demand_level": "Moderate"
-        } 
+        }
+
+    async def handle_general_inquiry(self, message: str, context: Optional[Dict] = None) -> str:
+        """
+        Handle general real estate inquiries.
+        This is a basic implementation that should be enhanced with more sophisticated response generation.
+        """
+        try:
+            # For now, return a generic response
+            return (
+                "I understand you have a general question about real estate. "
+                "I'd be happy to help you with information about our properties, "
+                "market trends, or the buying/selling process. Could you please "
+                "specify what particular aspect you'd like to know more about?"
+            )
+        except Exception as e:
+            print(f"Error handling general inquiry: {str(e)}")
+            return (
+                "I apologize, but I'm having trouble processing your general inquiry. "
+                "Could you please rephrase your question?"
+            ) 

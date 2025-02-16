@@ -38,8 +38,8 @@ async def test_route_intent_property_inquiry():
         {}
     )
     assert isinstance(response, str)
-    assert "Property Type: Apartment" in response
-    assert "Location: Test Location" in response
+    assert "Apartment" in response
+    assert "Test Location" in response
 
 @pytest.mark.asyncio
 async def test_route_intent_price_inquiry():

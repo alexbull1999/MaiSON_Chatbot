@@ -16,6 +16,7 @@ def mock_llm_client():
 @pytest.mark.asyncio
 async def test_classify_property_inquiry(intent_classifier, mock_llm_client):
     """Test classification of property inquiry messages."""
+    intent_classifier.llm_client = mock_llm_client
     mock_llm_client.generate_response.return_value = "property_inquiry"
     message = "What are the features of this house?"
     result = await intent_classifier.classify(message)
@@ -24,6 +25,7 @@ async def test_classify_property_inquiry(intent_classifier, mock_llm_client):
 @pytest.mark.asyncio
 async def test_classify_availability_request(intent_classifier, mock_llm_client):
     """Test classification of availability request messages."""
+    intent_classifier.llm_client = mock_llm_client
     mock_llm_client.generate_response.return_value = "availability_and_booking_request"
     message = "When can I view this property?"
     result = await intent_classifier.classify(message)
@@ -32,6 +34,7 @@ async def test_classify_availability_request(intent_classifier, mock_llm_client)
 @pytest.mark.asyncio
 async def test_classify_price_inquiry(intent_classifier, mock_llm_client):
     """Test classification of price inquiry messages."""
+    intent_classifier.llm_client = mock_llm_client
     mock_llm_client.generate_response.return_value = "price_inquiry"
     message = "How much does this property cost?"
     result = await intent_classifier.classify(message)
@@ -48,7 +51,10 @@ async def test_classify_unknown_intent(intent_classifier, mock_llm_client):
 @pytest.mark.asyncio
 async def test_classify_error_handling(intent_classifier, mock_llm_client):
     """Test error handling during classification."""
+    # Set up the mock to raise an exception
+    intent_classifier.llm_client = mock_llm_client
     mock_llm_client.generate_response.side_effect = Exception("Test error")
+    
     message = "What are the features of this house?"
     result = await intent_classifier.classify(message)
     assert result == Intent.UNKNOWN 

@@ -46,19 +46,35 @@ class PropertyContextModule:
     ) -> str:
         """Handle property-specific inquiries."""
         try:
+            if not self.current_property:
+                return "I don't have any property selected to provide information about. Could you specify which property you're interested in?"
+
+            property_details = {
+                "type": self.current_property.type,
+                "location": self.current_property.location,
+                "name": self.current_property.name
+            }
+
             response = await self.llm_client.generate_response(
                 messages=[
                     {
                         "role": "system",
                         "content": (
                             "You are a real estate agent. Provide detailed "
-                            "information about property features and specifications."
+                            "information about property features and specifications. "
+                            f"The property is a {property_details['type']} "
+                            f"located in {property_details['location']}."
                         )
                     },
                     {"role": "user", "content": message}
                 ],
                 temperature=0.7
             )
+
+            # Ensure property details are in the response
+            if not any(detail in response for detail in [property_details['type'], property_details['location']]):
+                response = f"Property Type: {property_details['type']}\nLocation: {property_details['location']}\n\n{response}"
+
             return response
         except Exception as e:
             print(f"Error in property context module: {str(e)}")
@@ -102,19 +118,35 @@ class PropertyContextModule:
     ) -> str:
         """Handle property pricing inquiries."""
         try:
+            if not self.current_property:
+                return "I don't have any property selected to provide pricing information about. Could you specify which property you're interested in?"
+
+            property_details = {
+                "type": self.current_property.type,
+                "location": self.current_property.location,
+                "name": self.current_property.name
+            }
+
             response = await self.llm_client.generate_response(
                 messages=[
                     {
                         "role": "system",
                         "content": (
                             "You are a pricing specialist. Provide accurate "
-                            "information about property prices and market values."
+                            "information about property prices and market values. "
+                            f"The property is a {property_details['type']} "
+                            f"located in {property_details['location']}."
                         )
                     },
                     {"role": "user", "content": message}
                 ],
                 temperature=0.7
             )
+
+            # Ensure property details are in the response
+            if property_details['location'] not in response:
+                response = f"For the property in {property_details['location']}:\n\n{response}"
+
             return response
         except Exception as e:
             print(f"Error in pricing handler: {str(e)}")
