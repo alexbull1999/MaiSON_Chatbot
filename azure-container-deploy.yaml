@@ -1,0 +1,39 @@
+apiVersion: '2021-07-01'
+name: maison-chatbot-container
+location: northeurope
+properties:
+  containers:
+  - name: maison-chatbot
+    properties:
+      image: ghcr.io/YOUR_GITHUB_USERNAME/maison-chatbot:latest
+      ports:
+      - port: 8000
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+      environmentVariables:
+      - name: AZURE_POSTGRES_HOST
+        value: maisonchatbot-postgres.postgres.database.azure.com
+      - name: AZURE_POSTGRES_USER
+        secureValue: ''  # Will be set via Azure CLI
+      - name: AZURE_POSTGRES_PASSWORD
+        secureValue: ''  # Will be set via Azure CLI
+      - name: AZURE_POSTGRES_DB
+        value: postgres
+      - name: AZURE_POSTGRES_PORT
+        value: '5432'
+      - name: OPENAI_API_KEY
+        secureValue: ''  # Will be set via Azure CLI
+      - name: ANTHROPIC_API_KEY
+        secureValue: ''  # Will be set via Azure CLI
+      - name: GOOGLE_API_KEY
+        secureValue: ''  # Will be set via Azure CLI
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: TCP
+      port: 8000
+  restartPolicy: Always 

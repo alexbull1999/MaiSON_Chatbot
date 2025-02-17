@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 
 app = FastAPI(
-    title="maiSON Chatbot API",
-    description="API for the maiSON real estate chatbot",
+    title="MaiSON Chatbot API",
+    description="API for the MaiSON real estate chatbot",
     version="0.1.0"
 )
 
@@ -12,12 +12,14 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://maisonfrontenddnsnamelabel.gbamb4drehf6cjdy.northeurope.azurecontainer.io",
+        "http://maisonfrontenddnsnamelabel.gbamb4drehf6cjdy.northeurope.azurecontainer.io",
         "http://localhost:5137"
     ],
     allow_credentials=True,
-    allow_methods=["POST", "GET"],  # Include GET for health checks
-    allow_headers=["Content-Type"],
+    allow_methods=["POST", "GET", "OPTIONS"],  # Added OPTIONS for preflight requests
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
 # Include routers
