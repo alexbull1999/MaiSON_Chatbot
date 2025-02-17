@@ -3,15 +3,12 @@ import sys
 from pathlib import Path
 import asyncio
 import json
-from datetime import datetime
-import os
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from app.modules.data_integration.property_data_service import PropertyDataService
-from app.config import settings
 
 async def test_area_insights():
     """Test getting area insights for different locations."""

@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 import os
 from dotenv import load_dotenv
 from typing import Optional
-from functools import lru_cache
 
 load_dotenv()
 
@@ -59,5 +58,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
         extra = "allow"  # Allow extra fields
+
 
 settings = Settings() 

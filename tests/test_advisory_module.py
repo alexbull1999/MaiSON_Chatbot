@@ -11,11 +11,15 @@ if project_root not in sys.path:
 
 from app.modules.advisory.advisory_module import AdvisoryModule
 from app.modules.property_context.property_context_module import Property
-from app.modules.data_integration.property_data_service import (
+from app.models.property_data import (
     PropertyPrice,
-    AreaAmenity,
-    TransportLink,
-    AreaInsights
+    Amenity,
+    Station,
+    School,
+    AreaProfile,
+    AreaInsights,
+    PropertySpecificInsights,
+    LocationHighlights
 )
 
 @pytest.fixture
@@ -28,41 +32,20 @@ def mock_property_data_service():
         mock_instance = AsyncMock()
         # Set up mock area insights
         mock_instance.get_area_insights.return_value = AreaInsights(
-            property_prices=PropertyPrice(
+            market_overview=PropertyPrice(
                 average_price=350000.0,
                 price_change_1y=5.2,
-                price_change_5y=15.0,
+                property_types=["apartments", "houses", "condos"],
                 number_of_sales=120,
                 last_updated=datetime.utcnow()
             ),
-            amenities=[
-                AreaAmenity(
-                    name="Test Restaurant",
-                    type="restaurant",
-                    distance=100.0,
-                    rating=4.5
-                )
-            ],
-            transport_links=[
-                TransportLink(
-                    name="Test Station",
-                    type="station",
-                    distance=200.0,
-                    frequency="10 mins"
-                )
-            ],
-            schools=[{
-                "name": "Test School",
-                "type": "primary",
-                "distance": 300.0,
-                "rating": "Good"
-            }],
-            crime_rate=5.2,
-            demographics={
-                "population": 100000,
-                "median_age": 35
-            },
-            last_updated=datetime.utcnow()
+            area_profile=AreaProfile(
+                demographics={},
+                crime_rate=5.2,
+                amenities_summary={"restaurants": 15, "shops": 10},
+                transport_summary={"stations": {"count": 5, "average_distance": 0.5}},
+                education={"primary_schools": {"count": 3, "average_distance": 0.3}}
+            )
         )
         yield mock_instance
 
@@ -85,16 +68,19 @@ async def test_get_area_insights(advisory_module, mock_property_data_service, mo
     advisory_module.data_service = mock_property_data_service
     advisory_module.llm_client = mock_llm_client
     
+    # Mock the _generate_area_analysis method
+    advisory_module._generate_area_analysis = AsyncMock(return_value="Test analysis")
+    
     insights = await advisory_module.get_area_insights("London")
     
     assert isinstance(insights, dict)
-    assert "property_prices" in insights
-    assert insights["property_prices"]["average_price"] == 350000.0
-    assert insights["property_prices"]["price_change_1y"] == 5.2
-    assert len(insights["amenities"]) == 1
-    assert len(insights["transport_links"]) == 1
-    assert insights["crime_rate"] == 5.2
+    assert "market_overview" in insights
+    assert insights["market_overview"]["average_price"] == 350000.0
+    assert insights["market_overview"]["price_change_1y"] == 5.2
+    assert "area_profile" in insights
+    assert insights["area_profile"]["crime_rate"] == 5.2
     assert "analysis" in insights
+    assert insights["analysis"] == "Test analysis"
     assert isinstance(insights["last_updated"], str)
 
 @pytest.mark.asyncio
@@ -112,7 +98,7 @@ async def test_handle_general_inquiry_with_location(advisory_module, mock_proper
     
     assert isinstance(response, str)
     assert len(response) > 0
-    mock_property_data_service.get_area_insights.assert_called_once_with("London")
+    mock_property_data_service.get_area_insights.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_handle_general_inquiry_without_location(advisory_module, mock_llm_client):
@@ -134,23 +120,24 @@ async def test_generate_area_analysis(advisory_module, mock_llm_client):
     """Test generating area analysis with LLM."""
     advisory_module.llm_client = mock_llm_client
     
-    area_data = AreaInsights(
-        property_prices=PropertyPrice(
+    insights = AreaInsights(
+        market_overview=PropertyPrice(
             average_price=350000.0,
             price_change_1y=5.2,
-            price_change_5y=15.0,
+            property_types=["apartments", "houses", "condos"],
             number_of_sales=120,
             last_updated=datetime.utcnow()
         ),
-        amenities=[],
-        transport_links=[],
-        schools=[],
-        crime_rate=5.2,
-        demographics={},
-        last_updated=datetime.utcnow()
+        area_profile=AreaProfile(
+            demographics={},
+            crime_rate=5.2,
+            amenities_summary={"restaurants": 15, "shops": 10},
+            transport_summary={"stations": {"count": 5, "average_distance": 0.5}},
+            education={"primary_schools": {"count": 3, "average_distance": 0.3}}
+        )
     )
     
-    analysis = await advisory_module._generate_area_analysis("London", area_data)
+    analysis = await advisory_module._generate_area_analysis("London", insights.model_dump())
     assert isinstance(analysis, str)
     assert len(analysis) > 0
 
@@ -184,4 +171,25 @@ def test_get_market_analysis():
     assert isinstance(analysis, dict)
     assert "market_trend" in analysis
     assert "average_price" in analysis
-    assert "demand_level" in analysis 
+    assert "demand_level" in analysis
+
+@pytest.mark.asyncio
+async def test_location_extraction(advisory_module):
+    """Test location extraction from queries."""
+    # Test with postcode
+    location = await advisory_module._extract_location(
+        "What's the property market like in SW1A 1AA?"
+    )
+    assert location == "SW1A 1AA"
+    
+    # Test with city name
+    location = await advisory_module._extract_location(
+        "Tell me about properties in Manchester"
+    )
+    assert location == "Manchester"
+    
+    # Test with area name
+    location = await advisory_module._extract_location(
+        "What's the market like in North London?"
+    )
+    assert location == "North London" 

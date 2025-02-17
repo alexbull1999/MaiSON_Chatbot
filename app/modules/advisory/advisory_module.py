@@ -1,10 +1,8 @@
 from typing import List, Dict, Optional
-import aiohttp
 from datetime import datetime
 from app.modules.property_context.property_context_module import Property
 from ..llm import LLMClient, LLMProvider
 from ..data_integration.property_data_service import PropertyDataService
-from app.models.property_data import AreaInsights, PropertySpecificInsights
 
 class AdvisoryModule:
     def __init__(self):
@@ -43,7 +41,7 @@ class AdvisoryModule:
                 # Add property-specific analysis
                 analysis = await self._generate_property_analysis(
                     location,
-                    insights,
+                    insights.model_dump(),
                     property_details
                 )
             else:
@@ -51,8 +49,9 @@ class AdvisoryModule:
                 insights = await self.data_service.get_area_insights(location, is_broad_area=True)
                 
                 # Add area-level analysis
-                analysis = await self._generate_area_analysis(location, insights)
+                analysis = await self._generate_area_analysis(location, insights.model_dump())
             
+            # Convert Pydantic model to dict and add analysis
             insights_dict = insights.model_dump()
             insights_dict['analysis'] = analysis
             insights_dict['last_updated'] = datetime.utcnow().isoformat()
@@ -164,8 +163,7 @@ class AdvisoryModule:
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are a knowledgeable real estate advisor. Provide helpful, "
-                                     "specific advice based on your general knowledge."
+                            "content": "You are a knowledgeable real estate advisor. Provide helpful, specific advice based on your general knowledge."
                         },
                         {"role": "user", "content": message}
                     ],
