@@ -163,7 +163,7 @@ class AdvisoryModule:
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are a knowledgeable real estate advisor. Provide helpful, specific advice based on your general knowledge."
+                            "content": "You are an AI real estate advisor. Provide helpful, specific, correct advice based on your general knowledge."
                         },
                         {"role": "user", "content": message}
                     ],
