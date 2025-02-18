@@ -75,6 +75,7 @@ async def test_get_area_insights_broad_area(property_service, mock_llm_client, m
     mock_session.get.return_value.__aenter__.return_value.json = AsyncMock(side_effect=[
         mock_nominatim_response,  # For location lookup
         mock_osm_response,        # For amenities and transport
+        [],                       # For crime data
         mock_osm_response        # For schools
     ])
     
@@ -90,8 +91,11 @@ async def test_get_area_insights_broad_area(property_service, mock_llm_client, m
     assert isinstance(insights.area_profile.amenities_summary, dict)
     assert isinstance(insights.area_profile.transport_summary, dict)
     assert isinstance(insights.area_profile.education, dict)
-    assert len(insights.area_profile.amenities_summary) > 0
-    assert "stations" in insights.area_profile.transport_summary
+    
+    # Update assertions to be more flexible
+    assert len(insights.area_profile.amenities_summary) > 0  # Check that we have any amenities
+    assert insights.area_profile.transport_summary["stations"]["count"] >= 0
+    assert any(key in insights.area_profile.education for key in ["primary", "Unknown"])  # Check for any valid education type
 
 @pytest.mark.asyncio
 async def test_get_area_insights_property_specific(property_service, mock_llm_client, mock_nominatim_response, mock_osm_response):
