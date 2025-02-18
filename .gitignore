@@ -4,6 +4,8 @@ env/
 ENV/
 .env/
 .venv/
+*.pem
+*.pfx
 
 # Python
 __pycache__/

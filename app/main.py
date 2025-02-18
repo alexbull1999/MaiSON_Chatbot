@@ -16,6 +16,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://thankful-mud-084a12703.4.azurestaticapps.net",  # Production frontend
+        "https://4.207.106.67",  # Application Gateway IP
         "http://localhost:5137",  # Local development frontend
         "http://localhost:3000",  # Common local development port
         "http://127.0.0.1:5137",  # Alternative local development URL
