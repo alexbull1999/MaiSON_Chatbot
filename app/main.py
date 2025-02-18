@@ -6,7 +6,7 @@ app = FastAPI(
     title="MaiSON Chatbot API",
     description="API for the MaiSON real estate chatbot",
     version="0.1.0",
-    root_path="/",  # Add this for proper HTTPS handling
+    root_path="",  # Remove the root_path as it's handled by Azure
     openapi_url="/openapi.json",
     docs_url="/docs"
 )
@@ -19,18 +19,12 @@ app.add_middleware(
         "http://localhost:5137",  # Local development frontend
         "http://localhost:3000",  # Common local development port
         "http://127.0.0.1:5137",  # Alternative local development URL
+        "http://localhost:8137",  # Additional local development port
+        "http://127.0.0.1:8137",  # Additional local development URL
     ],
     allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS", "HEAD"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Accept",
-        "Origin",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-    ],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=["*"],  # Allow all headers for development ease
     expose_headers=[
         "Content-Length",
         "Content-Range",
