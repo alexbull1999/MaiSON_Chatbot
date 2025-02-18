@@ -17,6 +17,7 @@ setup(
         "anthropic",
         "google-generativeai",
         "tenacity",
+        "aiohttp>=3.8.0",
     ],
     extras_require={
         "test": [
