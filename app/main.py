@@ -5,10 +5,13 @@ from app.api.routes import router
 app = FastAPI(
     title="MaiSON Chatbot API",
     description="API for the MaiSON real estate chatbot",
-    version="0.1.0"
+    version="0.1.0",
+    root_path="/",  # Add this for proper HTTPS handling
+    openapi_url="/openapi.json",
+    docs_url="/docs"
 )
 
-# Configure CORS
+# Configure CORS with secure settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -18,7 +21,7 @@ app.add_middleware(
         "http://127.0.0.1:5137",  # Alternative local development URL
     ],
     allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS", "HEAD"],  # Common HTTP methods
+    allow_methods=["POST", "GET", "OPTIONS", "HEAD"],
     allow_headers=[
         "Content-Type",
         "Authorization",
