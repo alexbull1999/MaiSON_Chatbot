@@ -17,11 +17,13 @@ app.add_middleware(
     allow_origins=[
         "https://thankful-mud-084a12703.4.azurestaticapps.net",  # Production frontend
         "https://4.207.106.67",  # Application Gateway IP
+        "https://maisonbot-api.xyz",  # Your custom domain
         "http://localhost:5137",  # Local development frontend
         "http://localhost:3000",  # Common local development port
         "http://127.0.0.1:5137",  # Alternative local development URL
         "http://localhost:8137",  # Additional local development port
         "http://127.0.0.1:8137",  # Additional local development URL
+        "https://www.maisonai.co.uk"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
