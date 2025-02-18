@@ -36,31 +36,54 @@ def mock_osm_response():
         "elements": [
             {
                 "type": "node",
+                "id": 1,
+                "lat": 51.5074,
+                "lon": -0.1278,
                 "tags": {
                     "amenity": "restaurant",
                     "name": "Test Restaurant"
-                },
-                "lat": 51.5074,
-                "lon": -0.1278
+                }
             },
             {
                 "type": "node",
+                "id": 2,
+                "lat": 51.5075,
+                "lon": -0.1279,
+                "tags": {
+                    "amenity": "cafe",
+                    "name": "Test Cafe"
+                }
+            },
+            {
+                "type": "node",
+                "id": 3,
+                "lat": 51.5076,
+                "lon": -0.1280,
+                "tags": {
+                    "amenity": "pub",
+                    "name": "Test Pub"
+                }
+            },
+            {
+                "type": "node",
+                "id": 4,
+                "lat": 51.5077,
+                "lon": -0.1281,
                 "tags": {
                     "public_transport": "station",
                     "name": "Test Station"
-                },
-                "lat": 51.5074,
-                "lon": -0.1278
+                }
             },
             {
                 "type": "node",
+                "id": 5,
+                "lat": 51.5078,
+                "lon": -0.1282,
                 "tags": {
                     "amenity": "school",
                     "name": "Test School",
                     "school:level": "primary"
-                },
-                "lat": 51.5074,
-                "lon": -0.1278
+                }
             }
         ]
     }
@@ -72,30 +95,59 @@ async def test_get_area_insights_broad_area(property_service, mock_llm_client, m
     mock_session = AsyncMock()
     mock_session.get = AsyncMock()
     mock_session.get.return_value.__aenter__.return_value.status = 200
-    mock_session.get.return_value.__aenter__.return_value.json = AsyncMock(side_effect=[
+    
+    # Create a list of responses for each API call
+    api_responses = [
         mock_nominatim_response,  # For location lookup
         mock_osm_response,        # For amenities and transport
         [],                       # For crime data
-        mock_osm_response        # For schools
-    ])
+        mock_osm_response         # For schools
+    ]
+    
+    # Set up the mock to return each response in sequence
+    mock_session.get.return_value.__aenter__.return_value.json = AsyncMock(side_effect=api_responses)
     
     property_service.session = mock_session
     property_service.llm_client = mock_llm_client
     
-    insights = await property_service.get_area_insights("London", is_broad_area=True)
-    
-    assert isinstance(insights, AreaInsights)
-    assert insights.market_overview is not None
-    assert insights.market_overview.average_price == 350000.0
-    assert insights.market_overview.price_change_1y == 5.2
-    assert isinstance(insights.area_profile.amenities_summary, dict)
-    assert isinstance(insights.area_profile.transport_summary, dict)
-    assert isinstance(insights.area_profile.education, dict)
-    
-    # Update assertions to be more flexible
-    assert len(insights.area_profile.amenities_summary) > 0  # Check that we have any amenities
-    assert insights.area_profile.transport_summary["stations"]["count"] >= 0
-    assert any(key in insights.area_profile.education for key in ["primary", "Unknown"])  # Check for any valid education type
+    try:
+        insights = await property_service.get_area_insights("London", is_broad_area=True)
+        
+        # Debug output
+        print("Debug: Amenities summary:", insights.area_profile.amenities_summary)
+        print("Debug: Transport summary:", insights.area_profile.transport_summary)
+        print("Debug: Education summary:", insights.area_profile.education)
+        
+        # Basic type assertions
+        assert isinstance(insights, AreaInsights), "Result should be an AreaInsights instance"
+        assert insights.market_overview is not None, "Market overview should not be None"
+        assert isinstance(insights.area_profile.amenities_summary, dict), "Amenities summary should be a dict"
+        assert isinstance(insights.area_profile.transport_summary, dict), "Transport summary should be a dict"
+        assert isinstance(insights.area_profile.education, dict), "Education should be a dict"
+        
+        # Specific value assertions
+        assert insights.market_overview.average_price == 350000.0, "Incorrect average price"
+        assert insights.market_overview.price_change_1y == 5.2, "Incorrect price change"
+        
+        # Check amenities (we expect restaurant, cafe, and pub)
+        amenities = insights.area_profile.amenities_summary
+        assert amenities, "Amenities summary should not be empty"
+        assert sum(amenities.values()) >= 3, f"Expected at least 3 amenities, got {sum(amenities.values())}"
+        
+        # Check transport (we expect at least one station)
+        transport = insights.area_profile.transport_summary
+        assert transport["stations"]["count"] >= 0, "Should have station count"
+        
+        # Check education (we expect at least one school)
+        education = insights.area_profile.education
+        assert education, "Education summary should not be empty"
+        assert any(education[k]["count"] > 0 for k in education), "Should have at least one school"
+        
+    except Exception as e:
+        print(f"Debug: Test failed with error: {str(e)}")
+        print("Debug: Mock responses:", api_responses)
+        print("Debug: OSM Response elements:", mock_osm_response.get("elements", []))
+        raise
 
 @pytest.mark.asyncio
 async def test_get_area_insights_property_specific(property_service, mock_llm_client, mock_nominatim_response, mock_osm_response):
