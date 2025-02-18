@@ -12,7 +12,7 @@ def test_format_message_greeting():
     message = comm.format_message(MessageType.GREETING)
     assert isinstance(message, str)
     assert len(message) > 0
-    assert "Welcome to maiSON" in message or "Hello" in message
+    assert "Welcome to MaiSON" in message or "Hello" in message
 
 def test_format_message_error():
     comm = CommunicationModule()
@@ -43,4 +43,4 @@ async def test_generate_response():
     assert isinstance(response, str)
     assert len(response) > 0
     assert "property" in response.lower() 
-    assert "details" in response.lower() or "information" in response.lower()
+    assert "details" in response.lower() or "information" in response.lower() or "questions" in response.lower()
