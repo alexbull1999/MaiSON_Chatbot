@@ -13,7 +13,7 @@ class CommunicationModule:
     def __init__(self):
         self.templates: Dict[MessageType, List[str]] = {
             MessageType.GREETING: [
-                "Welcome to maiSON! How can I assist you today?",
+                "Welcome to MaiSON! How can I assist you today?",
                 "Hello! I'm here to help you with your property needs."
             ],
             MessageType.ERROR: [
