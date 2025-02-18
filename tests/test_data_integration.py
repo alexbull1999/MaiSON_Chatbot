@@ -1,12 +1,8 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime
 from app.models.property_data import (
     PropertyPrice,
-    Amenity,
-    Station,
-    School,
-    AreaProfile,
     AreaInsights,
     PropertySpecificInsights,
     LocationHighlights

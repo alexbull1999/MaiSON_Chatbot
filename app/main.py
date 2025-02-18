@@ -12,13 +12,26 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://maisonfrontenddnsnamelabel.gbamb4drehf6cjdy.northeurope.azurecontainer.io",
-        "http://localhost:5137"
+        "https://thankful-mud-084a12703.4.azurestaticapps.net",  # Production frontend
+        "http://localhost:5137",  # Local development frontend
+        "http://localhost:3000",  # Common local development port
+        "http://127.0.0.1:5137",  # Alternative local development URL
     ],
     allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS"],  # Added OPTIONS for preflight requests
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],  # Expose all headers
+    allow_methods=["POST", "GET", "OPTIONS", "HEAD"],  # Common HTTP methods
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+    ],
+    expose_headers=[
+        "Content-Length",
+        "Content-Range",
+    ],
     max_age=86400,  # Cache preflight requests for 24 hours
 )
 
@@ -28,7 +41,7 @@ app.include_router(router, prefix="/api/v1", tags=["chat"])
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to maiSON Chatbot API",
+        "message": "Welcome to MaiSON Chatbot API",
         "docs_url": "/docs",
         "openapi_url": "/openapi.json"
     } 

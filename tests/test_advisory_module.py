@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from datetime import datetime
 
 # Add the project root to Python path
@@ -13,13 +13,8 @@ from app.modules.advisory.advisory_module import AdvisoryModule
 from app.modules.property_context.property_context_module import Property
 from app.models.property_data import (
     PropertyPrice,
-    Amenity,
-    Station,
-    School,
     AreaProfile,
-    AreaInsights,
-    PropertySpecificInsights,
-    LocationHighlights
+    AreaInsights
 )
 
 @pytest.fixture
@@ -28,7 +23,7 @@ def advisory_module():
 
 @pytest.fixture
 def mock_property_data_service():
-    with patch('app.modules.data_integration.property_data_service.PropertyDataService') as mock:
+    with patch('app.modules.data_integration.property_data_service.PropertyDataService') as _:
         mock_instance = AsyncMock()
         # Set up mock area insights
         mock_instance.get_area_insights.return_value = AreaInsights(
@@ -51,7 +46,7 @@ def mock_property_data_service():
 
 @pytest.fixture
 def mock_llm_client():
-    with patch('app.modules.llm.llm_client.LLMClient') as mock:
+    with patch('app.modules.llm.llm_client.LLMClient') as _:
         mock_instance = AsyncMock()
         mock_instance.generate_response.return_value = "This is a test LLM response"
         yield mock_instance
