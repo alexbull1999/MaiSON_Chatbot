@@ -48,11 +48,18 @@ class MessageRouter:
         handler = intent_handlers.get(intent, self.communication_module.handle_unclear_intent)
         return await handler(message, context)
 
-    async def route_message(self, message: str, context: Optional[Dict] = None) -> Dict[str, str]:
+    async def route_message(self, message: str, context: Optional[Dict] = None, chat_type: str = "general") -> Dict[str, str]:
         """Route incoming message and return response with metadata."""
         try:
             # Classify message intent
             intent = await self.intent_classifier.classify(message)
+            
+            # Enforce routing rules based on chat type
+            if chat_type == "general":
+                # Only allow GENERAL_QUESTION and UNKNOWN intents for general chat
+                if intent not in [Intent.GENERAL_QUESTION, Intent.UNKNOWN]:
+                    intent = Intent.UNKNOWN
+                    message = "I can only help with general questions here. For property-specific inquiries, please use the property chat endpoint."
             
             # Get appropriate handler
             response = await self._route_intent(intent, message, context or {})
