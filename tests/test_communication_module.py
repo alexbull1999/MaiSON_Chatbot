@@ -3,6 +3,7 @@ from app.modules.communication.communication_module import (
     CommunicationModule,
     MessageType,
 )
+from unittest.mock import AsyncMock, patch
 
 
 def test_communication_module_initialization():
@@ -43,30 +44,39 @@ def test_format_message_with_params():
 
 @pytest.mark.asyncio
 async def test_generate_response():
-    comm = CommunicationModule()
-    context = {"property_id": "123"}
-    response = await comm.generate_response("property_inquiry", context)
+    with patch('app.modules.communication.communication_module.LLMClient') as MockLLMClient:
+        # Create mock LLM client
+        mock_llm = AsyncMock()
+        mock_llm.generate_response.return_value = "I can help you with information about this property."
+        MockLLMClient.return_value = mock_llm
 
-    # Basic validations
-    assert isinstance(response, str)
-    assert len(response) > 0
+        comm = CommunicationModule()
+        context = {"property_id": "123"}
+        response = await comm.generate_response("property_inquiry", context)
 
-    # Check for property-related content - using a broader set of keywords
-    assert any(
-        keyword in response.lower()
-        for keyword in [
-            "property",
-            "details",
-            "information",
-            "questions",
-            "interested",
-            "help",
-            "assist",
-        ]
-    ), f"Response should contain property-related keywords. Got: {response}"
+        # Basic validations
+        assert isinstance(response, str)
+        assert len(response) > 0
 
-    # Check for professional tone
-    assert response[0].isupper(), "Response should start with a capital letter"
-    assert any(
-        char in ".!?" for char in response[-1:]
-    ), "Response should end with proper punctuation"
+        # Check for property-related content - using a broader set of keywords
+        assert any(
+            keyword in response.lower()
+            for keyword in [
+                "property",
+                "details",
+                "information",
+                "questions",
+                "interested",
+                "help",
+                "assist",
+            ]
+        ), f"Response should contain property-related keywords. Got: {response}"
+
+        # Check for professional tone
+        assert response[0].isupper(), "Response should start with a capital letter"
+        assert any(
+            char in ".!?" for char in response[-1:]
+        ), "Response should end with proper punctuation"
+
+        # Verify LLM was called correctly
+        mock_llm.generate_response.assert_called_once()
