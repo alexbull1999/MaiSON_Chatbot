@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from pydantic import model_validator
 
 # Property Schemas
 class PropertyBase(BaseModel):
@@ -55,44 +56,99 @@ class Inquiry(InquiryBase):
     class Config:
         orm_mode = True
 
-# Message Schemas
-class MessageBase(BaseModel):
+# General Conversation Schemas
+class GeneralMessageBase(BaseModel):
     role: str
     content: str
     intent: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-class MessageCreate(MessageBase):
+class GeneralMessageCreate(GeneralMessageBase):
     conversation_id: int
 
-class Message(MessageBase):
+class GeneralMessage(GeneralMessageBase):
     id: int
     conversation_id: int
-    created_at: datetime
+    timestamp: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Conversation Schemas
-class ConversationBase(BaseModel):
-    user_id: str
-    user_name: str
-    user_email: str
-    property_id: Optional[str] = None
-    seller_id: Optional[str] = None
+class GeneralConversationBase(BaseModel):
+    session_id: str
+    user_id: Optional[str] = None
+    is_logged_in: bool = False
     context: Optional[Dict[str, Any]] = None
 
-class ConversationCreate(ConversationBase):
+class GeneralConversationCreate(GeneralConversationBase):
     pass
 
-class Conversation(ConversationBase):
+class GeneralConversation(GeneralConversationBase):
     id: int
     started_at: datetime
     last_message_at: datetime
-    messages: List[Message] = []
+    messages: List[GeneralMessage] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+# Property Conversation Schemas
+class PropertyMessageBase(BaseModel):
+    role: str
+    content: str
+    intent: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class PropertyMessageCreate(PropertyMessageBase):
+    conversation_id: int
+
+class PropertyMessage(PropertyMessageBase):
+    id: int
+    conversation_id: int
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+class PropertyConversationBase(BaseModel):
+    session_id: str
+    user_id: str
+    property_id: str
+    seller_id: str
+    property_context: Optional[Dict[str, Any]] = None
+
+class PropertyConversationCreate(PropertyConversationBase):
+    pass
+
+class PropertyConversation(PropertyConversationBase):
+    id: int
+    started_at: datetime
+    last_message_at: datetime
+    messages: List[PropertyMessage] = []
+
+    class Config:
+        from_attributes = True
+
+# Chat Response Schemas
+class GeneralChatResponse(BaseModel):
+    message: str
+    conversation_id: int
+    session_id: str
+    intent: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+class PropertyChatResponse(BaseModel):
+    message: str
+    conversation_id: int
+    session_id: str
+    intent: Optional[str] = None
+    property_context: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
 
 # External Reference Schemas
 class ExternalReferenceBase(BaseModel):
@@ -101,15 +157,25 @@ class ExternalReferenceBase(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 class ExternalReferenceCreate(ExternalReferenceBase):
-    conversation_id: int
+    general_conversation_id: Optional[int] = None
+    property_conversation_id: Optional[int] = None
+
+    @model_validator(mode='before')
+    def validate_conversation_ids(cls, values):
+        if values.get('general_conversation_id') and values.get('property_conversation_id'):
+            raise ValueError("Cannot reference both general and property conversations")
+        if not values.get('general_conversation_id') and not values.get('property_conversation_id'):
+            raise ValueError("Must reference either general or property conversation")
+        return values
 
 class ExternalReference(ExternalReferenceBase):
     id: int
-    conversation_id: int
+    general_conversation_id: Optional[int] = None
+    property_conversation_id: Optional[int] = None
     last_synced: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Response Schemas
 class ChatResponse(BaseModel):

@@ -7,123 +7,273 @@ All API endpoints require authentication using a bearer token:
 Authorization: Bearer your-api-token
 ```
 
-## Endpoints
+## Chat Endpoints
 
-### Chat Endpoint
+### General Chat
 
-Send a message to the chatbot:
+Send a general inquiry message to the chatbot:
 
 ```bash
-POST /chat
+POST /api/chat/general
 Content-Type: application/json
 
 {
-    "message": "Tell me about the downtown apartment"
+    "message": "Tell me about your services",
+    "user_id": "user123",           # Optional for anonymous users
+    "session_id": "session123"      # Optional, will be generated if not provided
 }
 ```
 
 Response:
 ```json
 {
-    "message": "The downtown apartment is a luxury property...",
-    "intent": "property_inquiry",
+    "message": "We offer various real estate services...",
+    "conversation_id": 1,
+    "session_id": "session123",
+    "intent": "service_inquiry",
     "context": {
-        "property_id": "123"
+        "topics_discussed": ["services"],
+        "last_intent": "service_inquiry"
     }
 }
 ```
 
-### Property Management
+### Property Chat
 
-#### List Properties
-
-```bash
-GET /properties
-```
-
-Response:
-```json
-{
-    "properties": [
-        {
-            "id": "123",
-            "name": "Luxury Downtown Apartment",
-            "type": "Apartment",
-            "location": "Downtown",
-            "price": 2500.00
-        }
-    ]
-}
-```
-
-#### Get Property Details
+Send a property-specific message to the chatbot:
 
 ```bash
-GET /properties/{property_id}
-```
-
-Response:
-```json
-{
-    "id": "123",
-    "name": "Luxury Downtown Apartment",
-    "type": "Apartment",
-    "location": "Downtown",
-    "price": 2500.00,
-    "description": "Modern luxury apartment...",
-    "availability": [
-        {
-            "start_date": "2024-03-01T00:00:00Z",
-            "end_date": "2024-03-02T00:00:00Z",
-            "is_available": true
-        }
-    ]
-}
-```
-
-### Availability
-
-Check property availability:
-
-```bash
-GET /properties/{property_id}/availability
-```
-
-Response:
-```json
-{
-    "availability": [
-        {
-            "start_date": "2024-03-01T00:00:00Z",
-            "end_date": "2024-03-02T00:00:00Z",
-            "is_available": true
-        }
-    ]
-}
-```
-
-### Inquiries
-
-Submit an inquiry:
-
-```bash
-POST /inquiries
+POST /api/chat/property
 Content-Type: application/json
 
 {
-    "property_id": "123",
-    "user_name": "John Doe",
-    "user_email": "john@example.com",
-    "message": "I'm interested in viewing this property"
+    "message": "Tell me about this property",
+    "user_id": "user123",           # Required
+    "property_id": "prop123",       # Required
+    "seller_id": "seller123",       # Required
+    "session_id": "session123"      # Optional, will be generated if not provided
 }
 ```
 
 Response:
 ```json
 {
-    "inquiry_id": "456",
-    "status": "pending",
-    "created_at": "2024-03-01T12:00:00Z"
+    "message": "This property is a luxury apartment...",
+    "conversation_id": 1,
+    "session_id": "session123",
+    "intent": "property_info",
+    "property_context": {
+        "property_details_requested": true,
+        "last_intent": "property_info"
+    }
+}
+```
+
+## Conversation Management
+
+### Get General Conversation History
+
+```bash
+GET /api/conversations/general/{conversation_id}/history
+```
+
+Response:
+```json
+{
+    "conversation_id": 1,
+    "session_id": "session123",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Tell me about your services",
+            "timestamp": "2024-03-01T12:00:00Z",
+            "intent": "service_inquiry"
+        },
+        {
+            "role": "assistant",
+            "content": "We offer various real estate services...",
+            "timestamp": "2024-03-01T12:00:01Z",
+            "intent": "service_info"
+        }
+    ],
+    "context": {
+        "topics_discussed": ["services"],
+        "last_intent": "service_info"
+    }
+}
+```
+
+### Get Property Conversation History
+
+```bash
+GET /api/conversations/property/{conversation_id}/history
+```
+
+Response:
+```json
+{
+    "conversation_id": 1,
+    "session_id": "session123",
+    "property_id": "prop123",
+    "seller_id": "seller123",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Tell me about this property",
+            "timestamp": "2024-03-01T12:00:00Z",
+            "intent": "property_info"
+        },
+        {
+            "role": "assistant",
+            "content": "This property is a luxury apartment...",
+            "timestamp": "2024-03-01T12:00:01Z",
+            "intent": "property_details"
+        }
+    ],
+    "property_context": {
+        "property_details_requested": true,
+        "last_intent": "property_details"
+    }
+}
+```
+
+### Get User Conversations
+
+```bash
+GET /api/conversations/user/{user_id}
+```
+
+Response:
+```json
+{
+    "general_conversations": [
+        {
+            "id": 1,
+            "session_id": "session123",
+            "started_at": "2024-03-01T12:00:00Z",
+            "last_message_at": "2024-03-01T12:00:01Z",
+            "context": {
+                "topics_discussed": ["services"]
+            }
+        }
+    ],
+    "property_conversations": [
+        {
+            "id": 2,
+            "session_id": "session456",
+            "property_id": "prop123",
+            "seller_id": "seller123",
+            "started_at": "2024-03-01T12:00:00Z",
+            "last_message_at": "2024-03-01T12:00:01Z",
+            "property_context": {
+                "property_details_requested": true
+            }
+        }
+    ]
+}
+```
+
+## Conversation Management
+
+### Get General Conversation History
+
+```bash
+GET /api/conversations/general/{conversation_id}/history
+```
+
+Response:
+```json
+{
+    "conversation_id": 1,
+    "session_id": "session123",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Tell me about your services",
+            "timestamp": "2024-03-01T12:00:00Z",
+            "intent": "service_inquiry"
+        },
+        {
+            "role": "assistant",
+            "content": "We offer various real estate services...",
+            "timestamp": "2024-03-01T12:00:01Z",
+            "intent": "service_info"
+        }
+    ],
+    "context": {
+        "topics_discussed": ["services"],
+        "last_intent": "service_info"
+    }
+}
+```
+
+### Get Property Conversation History
+
+```bash
+GET /api/conversations/property/{conversation_id}/history
+```
+
+Response:
+```json
+{
+    "conversation_id": 1,
+    "session_id": "session123",
+    "property_id": "prop123",
+    "seller_id": "seller123",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Tell me about this property",
+            "timestamp": "2024-03-01T12:00:00Z",
+            "intent": "property_info"
+        },
+        {
+            "role": "assistant",
+            "content": "This property is a luxury apartment...",
+            "timestamp": "2024-03-01T12:00:01Z",
+            "intent": "property_details"
+        }
+    ],
+    "property_context": {
+        "property_details_requested": true,
+        "last_intent": "property_details"
+    }
+}
+```
+
+### Get User Conversations
+
+```bash
+GET /api/conversations/user/{user_id}
+```
+
+Response:
+```json
+{
+    "general_conversations": [
+        {
+            "id": 1,
+            "session_id": "session123",
+            "started_at": "2024-03-01T12:00:00Z",
+            "last_message_at": "2024-03-01T12:00:01Z",
+            "context": {
+                "topics_discussed": ["services"]
+            }
+        }
+    ],
+    "property_conversations": [
+        {
+            "id": 2,
+            "session_id": "session456",
+            "property_id": "prop123",
+            "seller_id": "seller123",
+            "started_at": "2024-03-01T12:00:00Z",
+            "last_message_at": "2024-03-01T12:00:01Z",
+            "property_context": {
+                "property_details_requested": true
+            }
+        }
+    ]
 }
 ```
 
@@ -134,12 +284,12 @@ The API uses standard HTTP status codes:
 - 400: Bad Request
 - 401: Unauthorized
 - 404: Not Found
+- 422: Validation Error
 - 500: Internal Server Error
 
 Error response format:
 ```json
 {
-    "error": "Error message",
-    "detail": "Additional error details"
+    "detail": "Error message with additional details"
 }
 ``` 

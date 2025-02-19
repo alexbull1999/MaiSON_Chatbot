@@ -2,131 +2,181 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
-from app.database.schemas import ChatResponse
-from app.database.models import Conversation
+from app.database.schemas import (
+    GeneralChatResponse,
+    PropertyChatResponse,
+)
+from app.database.models import (
+    GeneralConversation as GeneralConversationModel,
+    PropertyConversation as PropertyConversationModel,
+)
 from .controllers import chat_controller
 from pydantic import BaseModel
+import uuid
 
 router = APIRouter()
 
-class ChatRequest(BaseModel):
+
+class GeneralChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+
+class PropertyChatRequest(BaseModel):
     message: str
     user_id: str
-    user_name: str
-    user_email: str
-    property_id: Optional[str] = None
-    seller_id: Optional[str] = None
-    conversation_id: Optional[int] = None
+    property_id: str
+    seller_id: str
+    session_id: Optional[str] = None
 
-class ChatMessageRequest(BaseModel):
-    message: str
-    sessionId: Optional[str] = None
 
-class ChatMessageResponse(BaseModel):
-    message: str
-    sessionId: str
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(
-    request: ChatRequest,
-    db: Session = Depends(get_db)
+@router.post("/chat/general", response_model=GeneralChatResponse)
+async def general_chat_endpoint(
+    request: GeneralChatRequest, db: Session = Depends(get_db)
 ):
     """
-    Handle chat messages and return AI responses.
-    
-    This endpoint:
-    1. Processes incoming chat messages
-    2. Maintains conversation context
-    3. Generates appropriate responses
-    4. Tracks message history
+    Handle general chat messages and return AI responses.
+    This endpoint handles both logged-in and anonymous users.
     """
     try:
-        response = await chat_controller.handle_chat(
+        # Generate session ID if not provided
+        session_id = request.session_id or str(uuid.uuid4())
+
+        response = await chat_controller.handle_general_chat(
             message=request.message,
             user_id=request.user_id,
-            user_name=request.user_name,
-            user_email=request.user_email,
-            property_id=request.property_id,
-            seller_id=request.seller_id,
-            conversation_id=request.conversation_id,
-            db=db
+            session_id=session_id,
+            db=db,
         )
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/conversations/{conversation_id}/history")
-async def get_conversation_history(
-    conversation_id: int,
-    db: Session = Depends(get_db)
+
+@router.post("/chat/property", response_model=PropertyChatResponse)
+async def property_chat_endpoint(
+    request: PropertyChatRequest, db: Session = Depends(get_db)
 ):
-    """Get the message history for a specific conversation."""
-    conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    """
+    Handle property-specific chat messages.
+    This endpoint requires user authentication and property/seller information.
+    """
+    try:
+        # Generate session ID if not provided
+        session_id = request.session_id or str(uuid.uuid4())
+
+        response = await chat_controller.handle_property_chat(
+            message=request.message,
+            user_id=request.user_id,
+            property_id=request.property_id,
+            seller_id=request.seller_id,
+            session_id=session_id,
+            db=db,
+        )
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/conversations/general/{conversation_id}/history")
+async def get_general_conversation_history(
+    conversation_id: int, db: Session = Depends(get_db)
+):
+    """Get the message history for a specific general conversation."""
+    conversation = (
+        db.query(GeneralConversationModel)
+        .filter(GeneralConversationModel.id == conversation_id)
+        .first()
+    )
+
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     return {
         "conversation_id": conversation_id,
+        "session_id": conversation.session_id,
         "messages": [
             {
                 "role": message.role,
                 "content": message.content,
-                "created_at": message.created_at,
-                "intent": message.intent
+                "timestamp": message.timestamp,
+                "intent": message.intent,
             }
             for message in conversation.messages
         ],
-        "context": conversation.context
+        "context": conversation.context,
     }
 
-@router.get("/conversations/user/{user_id}")
-async def get_user_conversations(
-    user_id: str,
-    db: Session = Depends(get_db)
-):
-    """Get all conversations for a specific user."""
-    conversations = db.query(Conversation).filter(Conversation.user_id == user_id).all()
-    return [
-        {
-            "id": conv.id,
-            "property_id": conv.property_id,
-            "started_at": conv.started_at,
-            "last_message_at": conv.last_message_at,
-            "context": conv.context
-        }
-        for conv in conversations
-    ]
 
-@router.post("/chat/message", response_model=ChatMessageResponse)
-async def chat_message(
-    request: ChatMessageRequest,
-    db: Session = Depends(get_db)
+@router.get("/conversations/property/{conversation_id}/history")
+async def get_property_conversation_history(
+    conversation_id: int, db: Session = Depends(get_db)
 ):
-    """
-    Handle chat messages from the frontend.
-    
-    This endpoint:
-    1. Accepts a message and optional sessionId
-    2. Processes the message using the chat controller
-    3. Returns the AI response and a sessionId for conversation tracking
-    """
-    try:
-        # Convert sessionId to conversation_id if provided
-        conversation_id = int(request.sessionId) if request.sessionId else None
-        
-        # Process the chat request
-        response = await chat_controller.handle_chat(
-            message=request.message,
-            user_id="frontend_user",  # Default user ID for frontend users
-            user_name="Website Visitor",
-            user_email="visitor@example.com",
-            conversation_id=conversation_id,
-            db=db
-        )
-        
-        return ChatMessageResponse(
-            message=response.message,
-            sessionId=str(response.conversation_id)
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+    """Get the message history for a specific property conversation."""
+    conversation = (
+        db.query(PropertyConversationModel)
+        .filter(PropertyConversationModel.id == conversation_id)
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return {
+        "conversation_id": conversation_id,
+        "session_id": conversation.session_id,
+        "property_id": conversation.property_id,
+        "seller_id": conversation.seller_id,
+        "messages": [
+            {
+                "role": message.role,
+                "content": message.content,
+                "timestamp": message.timestamp,
+                "intent": message.intent,
+            }
+            for message in conversation.messages
+        ],
+        "property_context": conversation.property_context,
+    }
+
+
+@router.get("/conversations/user/{user_id}")
+async def get_user_conversations(user_id: str, db: Session = Depends(get_db)):
+    """Get all conversations for a specific user."""
+    general_conversations = (
+        db.query(GeneralConversationModel)
+        .filter(GeneralConversationModel.user_id == user_id)
+        .all()
+    )
+
+    property_conversations = (
+        db.query(PropertyConversationModel)
+        .filter(PropertyConversationModel.user_id == user_id)
+        .all()
+    )
+
+    return {
+        "general_conversations": [
+            {
+                "id": conv.id,
+                "session_id": conv.session_id,
+                "started_at": conv.started_at,
+                "last_message_at": conv.last_message_at,
+                "context": conv.context,
+            }
+            for conv in general_conversations
+        ],
+        "property_conversations": [
+            {
+                "id": conv.id,
+                "session_id": conv.session_id,
+                "property_id": conv.property_id,
+                "seller_id": conv.seller_id,
+                "started_at": conv.started_at,
+                "last_message_at": conv.last_message_at,
+                "property_context": conv.property_context,
+            }
+            for conv in property_conversations
+        ],
+    }
