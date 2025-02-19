@@ -17,19 +17,20 @@ load_dotenv()
 
 # Import the SQLAlchemy declarative Base and models
 from app.database import Base
-from app.database.models import *  # This imports all models
+from app.database.models import *  # noqa: F403, F401  # Required for Alembic to detect all models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Set the SQLAlchemy URL from environment variables
-config.set_main_option('sqlalchemy.url', 
+config.set_main_option(
+    "sqlalchemy.url",
     f"postgresql://{os.getenv('AZURE_POSTGRES_USER')}:"
     f"{os.getenv('AZURE_POSTGRES_PASSWORD')}@"
     f"{os.getenv('AZURE_POSTGRES_HOST')}:"
     f"{os.getenv('AZURE_POSTGRES_PORT')}/"
-    f"{os.getenv('AZURE_POSTGRES_DB')}"
+    f"{os.getenv('AZURE_POSTGRES_DB')}",
 )
 
 # Interpret the config file for Python logging.
@@ -85,9 +86,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
