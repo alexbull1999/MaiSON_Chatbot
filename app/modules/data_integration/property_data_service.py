@@ -16,6 +16,7 @@ from app.models.property_data import (
 )
 from app.config import settings
 import math
+from .cache import cache_area_insights, cache_market_data
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class PropertyDataService:
             self.session = aiohttp.ClientSession()
         return self.session
 
+    @cache_area_insights
     async def get_area_insights(self, location: str, is_broad_area: bool = False) -> Union[AreaInsights, PropertySpecificInsights]:
         """Get insights for a location."""
         try:
@@ -101,6 +103,7 @@ class PropertyDataService:
                     )
                 )
 
+    @cache_market_data
     async def _get_market_data(self, location: str) -> Optional[PropertyPrice]:
         """Get market data from LLM."""
         prompt = f"""Provide specific property insights for {location} including:
@@ -159,22 +162,27 @@ Return the response as a JSON object with these exact keys:
             logger.error(f"Failed to parse JSON from response: {str(e)}")
             return {}
 
-    def _summarize_amenities(self, amenities: List[Amenity]) -> Dict:
-        """Summarize amenities into categories with counts."""
-        categories = {}
+    def _summarize_amenities(self, amenities: List[Amenity]) -> Dict[str, int]:
+        """Summarize amenities by type."""
+        summary = {}
         for amenity in amenities:
-            categories[amenity.type] = categories.get(amenity.type, 0) + 1
-        return categories
+            if amenity.type not in summary:
+                summary[amenity.type] = 0
+            summary[amenity.type] += 1
+        return summary
 
-    def _summarize_transport(self, stations: List[Station]) -> Dict:
-        """Summarize transport links by average distance."""
-        summary = {
+    def _summarize_transport(self, stations: List[Station]) -> Dict[str, Dict[str, Union[int, float]]]:
+        """Summarize transport options."""
+        if not stations:
+            return {"stations": {"count": 0, "average_distance": 0}}
+        
+        total_distance = sum(station.distance for station in stations)
+        return {
             "stations": {
                 "count": len(stations),
-                "average_distance": sum(s.distance for s in stations) / len(stations) if stations else 0
+                "average_distance": total_distance / len(stations)
             }
         }
-        return summary
 
     def _summarize_schools(self, schools: List[School]) -> Dict:
         """Summarize schools by type and rating."""

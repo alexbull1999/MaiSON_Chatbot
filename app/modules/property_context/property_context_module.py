@@ -1,8 +1,11 @@
 from typing import Dict, Optional, List
 import aiohttp
+from datetime import datetime
 from ..llm import LLMClient, LLMProvider
+from ..data_integration.cache import cache_property_data, default_cache as cache
 
 class Property:
+    """Class representing a property with its details."""
     def __init__(self, id: str, name: str, type: str, location: str, details: Optional[Dict] = None):
         self.id = id
         self.name = name
@@ -14,11 +17,11 @@ class PropertyContextModule:
     """Module for handling property-specific queries and context."""
     
     def __init__(self):
-        self.properties: Dict[str, Property] = {}
         self.current_property: Optional[Property] = None
         self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
         self.listings_api_url = "https://maison-api.jollybush-a62cec71.uksouth.azurecontainerapps.io"
 
+    @cache_property_data
     async def _fetch_property_details(self, property_id: str) -> Optional[Dict]:
         """Fetch property details from the listings microservice."""
         try:
@@ -33,9 +36,12 @@ class PropertyContextModule:
 
     async def get_or_fetch_property(self, property_id: str) -> Optional[Property]:
         """Get property from cache or fetch from API."""
-        if property_id in self.properties:
-            return self.properties[property_id]
+        # Try to get Property object from cache first
+        cached_property = cache.get_property(property_id)
+        if isinstance(cached_property, Property):
+            return cached_property
         
+        # If not in cache or not a Property object, fetch from API
         details = await self._fetch_property_details(property_id)
         if details:
             property = Property(
@@ -45,7 +51,8 @@ class PropertyContextModule:
                 location=details.get("location", "Unknown Location"),
                 details=details
             )
-            self.properties[property_id] = property
+            # Store the Property object in cache
+            cache.set_property(property_id, property)
             return property
         return None
 

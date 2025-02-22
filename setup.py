@@ -19,6 +19,7 @@ setup(
         "tenacity",
         "aiohttp>=3.8.0",
         "apscheduler",
+        "cachetools>=5.5.1",
     ],
     extras_require={
         "test": [
