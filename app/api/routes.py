@@ -14,7 +14,6 @@ from .controllers import chat_controller
 from pydantic import BaseModel
 import uuid
 from enum import Enum
-from datetime import timedelta
 
 
 class Role(str, Enum):
@@ -72,7 +71,7 @@ async def general_chat_endpoint(
                 value=current_session_id,
                 max_age=86400,  # 24 hours in seconds
                 httponly=True,   # Cookie not accessible via JavaScript
-                samesite="lax", # Protects against CSRF
+                samesite="lax",  # Protects against CSRF
                 secure=True     # Only sent over HTTPS
             )
 

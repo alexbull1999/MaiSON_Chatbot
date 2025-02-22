@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
