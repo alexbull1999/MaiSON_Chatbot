@@ -72,7 +72,7 @@ class PropertyDataCache:
         self.area_insights_cache.clear()
         self.market_data_cache.clear()
 
-def create_cache_decorators(cache_instance: PropertyDataCache):
+def create_cache_decorators(cache_instance: PropertyDataCache):  # noqa: C901
     """Create cache decorators that use a specific cache instance."""
     
     def cache_property_data(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -118,6 +118,7 @@ def create_cache_decorators(cache_instance: PropertyDataCache):
         return wrapper
 
     return cache_property_data, cache_area_insights, cache_market_data
+
 
 # Create default cache instance and decorators for production use
 default_cache = PropertyDataCache()
