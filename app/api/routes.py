@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
@@ -14,6 +14,7 @@ from .controllers import chat_controller
 from pydantic import BaseModel
 import uuid
 from enum import Enum
+from datetime import timedelta
 
 
 class Role(str, Enum):
@@ -51,23 +52,37 @@ router = APIRouter()
 
 @router.post("/chat/general", response_model=GeneralChatResponse)
 async def general_chat_endpoint(
-    request: GeneralChatRequest, db: Session = Depends(get_db)
+    request: GeneralChatRequest,
+    response: Response,
+    session_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db)
 ):
     """
     Handle general chat messages and return AI responses.
     This endpoint handles both logged-in and anonymous users.
     """
     try:
-        # Generate session ID if not provided
-        session_id = request.session_id or str(uuid.uuid4())
+        # Use existing session ID from cookie if available, otherwise generate new one
+        current_session_id = session_id or request.session_id or str(uuid.uuid4())
 
-        response = await chat_controller.handle_general_chat(
+        # Set cookie for anonymous users
+        if not request.user_id:
+            response.set_cookie(
+                key="session_id",
+                value=current_session_id,
+                max_age=86400,  # 24 hours in seconds
+                httponly=True,   # Cookie not accessible via JavaScript
+                samesite="lax", # Protects against CSRF
+                secure=True     # Only sent over HTTPS
+            )
+
+        chat_response = await chat_controller.handle_general_chat(
             message=request.message,
             user_id=request.user_id,
-            session_id=session_id,
+            session_id=current_session_id,
             db=db,
         )
-        return response
+        return chat_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

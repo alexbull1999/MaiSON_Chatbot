@@ -1,16 +1,17 @@
 from typing import Dict, Optional
 from .communication.communication_module import CommunicationModule, MessageType
 
+
 class ResponseGenerator:
     def __init__(self):
         self.communication_module = CommunicationModule()
 
     async def generate_response(
-            self,
-            intent: str,
-            context: dict,
-            property_data: Optional[Dict] = None,
-            market_data: Optional[Dict] = None
+        self,
+        intent: str,
+        context: dict,
+        property_data: Optional[Dict] = None,
+        market_data: Optional[Dict] = None,
     ) -> str:
         """
         Generate a comprehensive response based on intent, context, and available data.
@@ -34,11 +35,11 @@ class ResponseGenerator:
         return "\n".join(filter(None, response_parts))
 
     async def _generate_main_response(
-            self,
-            intent: str,
-            context: dict,
-            property_data: Optional[Dict],
-            market_data: Optional[Dict]
+        self,
+        intent: str,
+        context: dict,
+        property_data: Optional[Dict],
+        market_data: Optional[Dict],
     ) -> str:
         """
         Generate the main part of the response based on the intent and available data.
@@ -58,4 +59,4 @@ class ResponseGenerator:
     def _format_market_response(self, market_data: Dict) -> str:
         """Format market-related response."""
         # TODO: Implement proper market response formatting
-        return f"Here's the market analysis: {market_data}" 
+        return f"Here's the market analysis: {market_data}"

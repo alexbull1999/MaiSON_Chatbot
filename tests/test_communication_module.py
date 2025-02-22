@@ -44,10 +44,14 @@ def test_format_message_with_params():
 
 @pytest.mark.asyncio
 async def test_generate_response():
-    with patch('app.modules.communication.communication_module.LLMClient') as MockLLMClient:
+    with patch(
+        "app.modules.communication.communication_module.LLMClient"
+    ) as MockLLMClient:
         # Create mock LLM client
         mock_llm = AsyncMock()
-        mock_llm.generate_response.return_value = "I can help you with information about this property."
+        mock_llm.generate_response.return_value = (
+            "I can help you with information about this property."
+        )
         MockLLMClient.return_value = mock_llm
 
         comm = CommunicationModule()

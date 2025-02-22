@@ -134,7 +134,7 @@ def test_property_chat_endpoint_success(override_get_db, mock_chat_controller):
         "user_id": "test_user",
         "property_id": "test_property",
         "role": Role.BUYER.value,
-        "counterpart_id": "test_seller"
+        "counterpart_id": "test_seller",
     }
 
     # Make request to the endpoint
@@ -143,7 +143,10 @@ def test_property_chat_endpoint_success(override_get_db, mock_chat_controller):
     # Verify response
     assert response.status_code == 200
     response_data = response.json()
-    assert response_data["message"] == "I can help you with information about this property."
+    assert (
+        response_data["message"]
+        == "I can help you with information about this property."
+    )
     assert response_data["intent"] == "property_info"
     assert response_data["session_id"] == "test_session"
     assert "property_context" in response_data
@@ -195,7 +198,7 @@ def test_property_chat_endpoint_error_handling(override_get_db, mock_chat_contro
         "user_id": "test_user",
         "property_id": "test_property",
         "role": Role.BUYER.value,
-        "counterpart_id": "test_seller"
+        "counterpart_id": "test_seller",
     }
 
     response = client.post("/api/v1/chat/property", json=request_data)

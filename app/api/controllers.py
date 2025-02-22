@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, Dict
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 from enum import Enum
+import uuid
 
 
 from app.database import get_db
@@ -17,6 +18,7 @@ from app.database.schemas import GeneralChatResponse, PropertyChatResponse
 from app.modules.communication.seller_buyer_communication import (
     SellerBuyerCommunicationModule,
 )
+from app.modules.session_management import SessionManager
 
 
 class Role(str, Enum):
@@ -28,6 +30,7 @@ class ChatController:
     def __init__(self):
         self.message_router = MessageRouter()
         self.seller_buyer_communication = SellerBuyerCommunicationModule()
+        self.session_manager = SessionManager()
 
     async def handle_general_chat(
         self,
@@ -50,6 +53,19 @@ class ChatController:
             conversation = await self._get_or_create_general_conversation(
                 db=db, session_id=session_id, user_id=user_id
             )
+
+            # Check if session is valid
+            if not self.session_manager.is_session_valid(conversation):
+                # For expired anonymous sessions, create a new one
+                if not conversation.is_logged_in:
+                    conversation = await self._get_or_create_general_conversation(
+                        db=db, session_id=str(uuid.uuid4()), user_id=user_id
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Session has expired. Please log in again."
+                    )
 
             # Create user message
             user_message = GeneralMessage(
@@ -101,6 +117,9 @@ class ChatController:
             conversation.last_message_at = datetime.utcnow()
             db.commit()
 
+            # Refresh session activity
+            await self.session_manager.refresh_session(conversation)
+
             return GeneralChatResponse(
                 message=response_text,
                 conversation_id=conversation.id,
@@ -145,6 +164,13 @@ class ChatController:
                 role=role,
                 counterpart_id=counterpart_id,
             )
+
+            # Check if session is valid
+            if not self.session_manager.is_property_session_valid(conversation):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Property conversation session has expired or been archived."
+                )
 
             # Create user message
             user_message = PropertyMessage(
@@ -201,14 +227,20 @@ class ChatController:
             conversation.last_message_at = datetime.utcnow()
             db.commit()
 
+            # Refresh session activity
+            await self.session_manager.refresh_session(conversation)
+
             return PropertyChatResponse(
                 message=response_text,
                 conversation_id=conversation.id,
                 session_id=conversation.session_id,
-                intent="property_chat",  # Using a generic intent for now
+                intent="property_chat",
                 property_context=conversation.property_context,
             )
 
+        except HTTPException:
+            db.rollback()
+            raise
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))

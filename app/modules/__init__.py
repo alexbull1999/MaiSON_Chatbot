@@ -1,5 +1,5 @@
 # app/modules/__init__.py
-# This file makes 'modules' a Python package. 
+# This file makes 'modules' a Python package.
 
 from .message_router import MessageRouter
 from .intent_classification import IntentClassifier, Intent
@@ -17,5 +17,5 @@ __all__ = [
     "CommunicationModule",
     "LLMClient",
     "LLMProvider",
-    "SystemPrompts"
-] 
+    "SystemPrompts",
+]
