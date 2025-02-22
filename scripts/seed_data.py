@@ -60,74 +60,112 @@ def seed_database():
         for message in general_messages:
             db.add(message)
 
-        # Create sample property conversation
-        property_conv = PropertyConversation(
-            user_id="test_user_2",
+        # Create sample buyer-seller conversations
+        buyer_conv = PropertyConversation(
+            user_id="test_buyer_1",
             session_id="test_session_2",
             property_id="test_property_1",
-            seller_id="test_seller_1",
+            role="buyer",
+            counterpart_id="test_seller_1",
+            conversation_status="active",
             property_context={
-                "last_intent": "property_inquiry",
-                "topics_discussed": ["property_inquiry", "price_inquiry"],
+                "last_intent": "negotiation",
+                "topics_discussed": ["property_inquiry", "negotiation"],
                 "property_details_requested": True,
-                "price_discussed": True
+                "offer_made": True
             }
         )
-        db.add(property_conv)
+        db.add(buyer_conv)
         db.flush()
 
-        # Create sample property messages
-        property_messages = [
+        seller_conv = PropertyConversation(
+            user_id="test_seller_1",
+            session_id="test_session_3",
+            property_id="test_property_1",
+            role="seller",
+            counterpart_id="test_buyer_1",
+            conversation_status="active",
+            property_context={
+                "last_intent": "buyer_seller_communication",
+                "topics_discussed": ["property_inquiry", "negotiation"],
+                "counter_offer_made": True
+            }
+        )
+        db.add(seller_conv)
+        db.flush()
+
+        # Create sample property messages for buyer conversation
+        buyer_messages = [
             PropertyMessage(
-                conversation_id=property_conv.id,
+                conversation_id=buyer_conv.id,
                 role="user",
-                content="Hi, I'm interested in the downtown apartment.",
-                intent="property_inquiry",
+                content="Hi, I'm interested in making an offer on the property.",
+                intent="negotiation",
                 message_metadata={"confidence": 0.95},
                 timestamp=datetime.utcnow() - timedelta(minutes=30)
             ),
             PropertyMessage(
-                conversation_id=property_conv.id,
+                conversation_id=buyer_conv.id,
                 role="assistant",
                 content=(
-                    "Hello! I'd be happy to tell you about our downtown apartment. "
-                    "It's a modern luxury apartment with 2 bedrooms..."
+                    "I'll help you make an offer on this property. "
+                    "Please specify your proposed price and any conditions."
                 ),
-                intent="property_inquiry",
-                message_metadata={"response_type": "property_details"},
+                intent="negotiation",
+                message_metadata={"response_type": "negotiation_facilitation"},
                 timestamp=datetime.utcnow() - timedelta(minutes=29)
             ),
             PropertyMessage(
-                conversation_id=property_conv.id,
+                conversation_id=buyer_conv.id,
                 role="user",
-                content="What's the price?",
-                intent="price_inquiry",
+                content="I'd like to offer $450,000 with a 30-day closing period.",
+                intent="negotiation",
                 message_metadata={"confidence": 0.98},
                 timestamp=datetime.utcnow() - timedelta(minutes=28)
-            ),
-            PropertyMessage(
-                conversation_id=property_conv.id,
-                role="assistant",
-                content="The apartment is priced at $2,500 per month...",
-                intent="price_inquiry",
-                message_metadata={"response_type": "price_info"},
-                timestamp=datetime.utcnow() - timedelta(minutes=27)
             )
         ]
         
-        for message in property_messages:
+        for message in buyer_messages:
+            db.add(message)
+
+        # Create sample property messages for seller conversation
+        seller_messages = [
+            PropertyMessage(
+                conversation_id=seller_conv.id,
+                role="user",
+                content="Thank you for your interest. I'm considering your offer.",
+                intent="buyer_seller_communication",
+                message_metadata={"confidence": 0.95},
+                timestamp=datetime.utcnow() - timedelta(minutes=27)
+            ),
+            PropertyMessage(
+                conversation_id=seller_conv.id,
+                role="assistant",
+                content=(
+                    "I'll help facilitate the negotiation. "
+                    "Would you like to make a counter-offer or accept the current offer?"
+                ),
+                intent="negotiation",
+                message_metadata={"response_type": "negotiation_facilitation"},
+                timestamp=datetime.utcnow() - timedelta(minutes=26)
+            )
+        ]
+        
+        for message in seller_messages:
             db.add(message)
 
         # Create sample external references
         external_refs = [
             ExternalReference(
-                property_conversation_id=property_conv.id,
-                service_name="property_service",
-                external_id="test_property_1",
+                property_conversation_id=buyer_conv.id,
+                service_name="seller_buyer_communication",
+                external_id="notification_1",
                 reference_metadata={
-                    "property_type": "apartment",
-                    "location": "downtown",
-                    "price": 2500.00
+                    "message_forwarded": True,
+                    "forwarded_at": datetime.utcnow().isoformat(),
+                    "property_id": "test_property_1",
+                    "sender_role": "buyer",
+                    "message_type": "negotiation"
                 }
             ),
             ExternalReference(

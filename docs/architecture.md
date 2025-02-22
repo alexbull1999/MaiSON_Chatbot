@@ -1,8 +1,8 @@
-# maiSON Chatbot Architecture
+# MaiSON Chatbot Architecture
 
 ## Overview
 
-The maiSON Chatbot is a microservice-based application designed to handle property-related inquiries and provide intelligent responses. The system is built using FastAPI and follows a modular architecture for maintainability and scalability.
+The MaiSON Chatbot is a microservice-based application designed to handle property-related inquiries and provide intelligent responses. The system is built using FastAPI and follows a modular architecture for maintainability and scalability.
 
 ## Core Components
 

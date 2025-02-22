@@ -94,15 +94,23 @@ class PropertyConversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(255), unique=True, index=True)
-    user_id = Column(String(255), nullable=False, index=True)  # Must be logged in
-    property_id = Column(String(255), nullable=False, index=True)
-    seller_id = Column(String(255), nullable=False, index=True)
+    user_id = Column(String(255), nullable=False, index=True)  # ID of the user sending messages
+    property_id = Column(String(255), nullable=False, index=True)  # Property being discussed
+    role = Column(String(50), nullable=False, index=True)  # 'buyer' or 'seller'
+    counterpart_id = Column(String(255), nullable=False, index=True)  # ID of the other party
+    conversation_status = Column(String(50), nullable=False, default="active")  # e.g., 'active', 'closed', 'pending'
     started_at = Column(DateTime, default=datetime.utcnow)
     last_message_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     property_context = Column(JSON)  # Store property-specific context
 
     # Relationship to messages
     messages = relationship("PropertyMessage", back_populates="conversation", cascade="all, delete-orphan")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Validate role
+        if "role" in kwargs and kwargs["role"] not in ["buyer", "seller"]:
+            raise ValueError("Role must be either 'buyer' or 'seller'")
 
 class PropertyMessage(Base):
     """Messages within property-specific conversations."""

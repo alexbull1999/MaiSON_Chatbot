@@ -114,8 +114,16 @@ class PropertyConversationBase(BaseModel):
     session_id: str
     user_id: str
     property_id: str
-    seller_id: str
+    role: str  # 'buyer' or 'seller'
+    counterpart_id: str
+    conversation_status: str = "active"
     property_context: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode='before')
+    def validate_role(cls, values):
+        if values.get('role') not in ['buyer', 'seller']:
+            raise ValueError("Role must be either 'buyer' or 'seller'")
+        return values
 
 class PropertyConversationCreate(PropertyConversationBase):
     pass

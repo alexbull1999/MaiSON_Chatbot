@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
+from enum import Enum
 
 
 from app.database import get_db
@@ -13,11 +14,20 @@ from app.database.models import (
 )
 from app.modules.message_router import MessageRouter
 from app.database.schemas import GeneralChatResponse, PropertyChatResponse
+from app.modules.communication.seller_buyer_communication import (
+    SellerBuyerCommunicationModule,
+)
+
+
+class Role(str, Enum):
+    BUYER = "buyer"
+    SELLER = "seller"
 
 
 class ChatController:
     def __init__(self):
         self.message_router = MessageRouter()
+        self.seller_buyer_communication = SellerBuyerCommunicationModule()
 
     async def handle_general_chat(
         self,
@@ -108,18 +118,20 @@ class ChatController:
         message: str,
         user_id: str,
         property_id: str,
-        seller_id: str,
+        role: Role,
+        counterpart_id: str,
         session_id: str,
         db: Session = Depends(get_db),
     ) -> PropertyChatResponse:
         """
-        Handle property-specific chat messages.
+        Handle property-specific chat messages between buyers and sellers.
 
         Args:
             message: The user's message
             user_id: Authenticated user's ID
             property_id: ID of the property being discussed
-            seller_id: ID of the seller
+            role: Role of the user (buyer/seller)
+            counterpart_id: ID of the other party in the conversation
             session_id: Session ID for conversation tracking
             db: Database session
         """
@@ -130,13 +142,14 @@ class ChatController:
                 session_id=session_id,
                 user_id=user_id,
                 property_id=property_id,
-                seller_id=seller_id,
+                role=role,
+                counterpart_id=counterpart_id,
             )
 
             # Create user message
             user_message = PropertyMessage(
                 conversation_id=conversation.id,
-                role="user",
+                role=role,
                 content=message,
                 timestamp=datetime.utcnow(),
             )
@@ -154,27 +167,30 @@ class ChatController:
                 "session_id": conversation.session_id,
                 "user_id": conversation.user_id,
                 "property_id": conversation.property_id,
-                "seller_id": conversation.seller_id,
+                "role": conversation.role,
+                "counterpart_id": conversation.counterpart_id,
                 "conversation_history": conversation_history,
                 "property_context": conversation.property_context or {},
             }
 
-            # Generate response using message router
-            response = await self.message_router.route_message(
-                message=message, context=context, chat_type="property"
+            # Handle message using seller-buyer communication module
+            response_text = await self.seller_buyer_communication.handle_message(
+                message=message, context=context
             )
-            response_text = response["response"]
-            intent = response["intent"]
 
             # Create assistant message
             assistant_message = PropertyMessage(
                 conversation_id=conversation.id,
                 role="assistant",
                 content=response_text,
-                intent=intent,
                 timestamp=datetime.utcnow(),
             )
             db.add(assistant_message)
+
+            # Notify counterpart about the new message
+            await self.seller_buyer_communication.notify_counterpart(
+                conversation_id=conversation.id, message=message, db=db, context=context
+            )
 
             # Update conversation context
             await self._update_property_conversation_context(
@@ -189,7 +205,7 @@ class ChatController:
                 message=response_text,
                 conversation_id=conversation.id,
                 session_id=conversation.session_id,
-                intent=intent,
+                intent="property_chat",  # Using a generic intent for now
                 property_context=conversation.property_context,
             )
 
@@ -228,7 +244,8 @@ class ChatController:
         session_id: str,
         user_id: str,
         property_id: str,
-        seller_id: str,
+        role: Role,
+        counterpart_id: str,
     ) -> PropertyConversation:
         """Get or create a property-specific conversation."""
         conversation = (
@@ -242,7 +259,9 @@ class ChatController:
                 session_id=session_id,
                 user_id=user_id,
                 property_id=property_id,
-                seller_id=seller_id,
+                role=role,
+                counterpart_id=counterpart_id,
+                conversation_status="active",
                 started_at=datetime.utcnow(),
                 last_message_at=datetime.utcnow(),
                 property_context={},

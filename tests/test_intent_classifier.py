@@ -47,6 +47,36 @@ async def test_classify_price_inquiry(intent_classifier, mock_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_classify_buyer_seller_communication(intent_classifier, mock_llm_client):
+    """Test classification of buyer-seller communication messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "buyer_seller_communication"
+    message = "Could you please provide more details about the renovation history?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.BUYER_SELLER_COMMUNICATION
+
+
+@pytest.mark.asyncio
+async def test_classify_negotiation(intent_classifier, mock_llm_client):
+    """Test classification of negotiation messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "negotiation"
+    message = "I would like to make an offer of $450,000 for the property"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.NEGOTIATION
+
+
+@pytest.mark.asyncio
+async def test_classify_general_question(intent_classifier, mock_llm_client):
+    """Test classification of general questions."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "general_question"
+    message = "What are the best areas to live in London?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.GENERAL_QUESTION
+
+
+@pytest.mark.asyncio
 async def test_classify_unknown_intent(intent_classifier, mock_llm_client):
     """Test classification of messages with unknown intent."""
     mock_llm_client.generate_response.return_value = "unknown"

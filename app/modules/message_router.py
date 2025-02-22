@@ -3,6 +3,7 @@ from .intent_classification import IntentClassifier, Intent
 from .property_context import PropertyContextModule
 from .advisory import AdvisoryModule
 from .communication import CommunicationModule
+from .communication.seller_buyer_communication import SellerBuyerCommunicationModule
 from .context_manager import ContextManager
 
 class MessageRouter:
@@ -11,6 +12,7 @@ class MessageRouter:
         self.property_context = PropertyContextModule()
         self.advisory_module = AdvisoryModule()
         self.communication_module = CommunicationModule()
+        self.seller_buyer_communication = SellerBuyerCommunicationModule()
         self.context_manager = ContextManager()
 
     async def process_message(self, message: str, context: Optional[Dict] = None) -> str:
@@ -40,7 +42,8 @@ class MessageRouter:
             Intent.PROPERTY_INQUIRY: self.property_context.handle_inquiry,
             Intent.AVAILABILITY_AND_BOOKING_REQUEST: self.property_context.handle_booking,
             Intent.PRICE_INQUIRY: self.property_context.handle_pricing,
-            Intent.SELLER_MESSAGE: self.communication_module.handle_seller_message,
+            Intent.BUYER_SELLER_COMMUNICATION: self.seller_buyer_communication.handle_message,
+            Intent.NEGOTIATION: self.seller_buyer_communication.handle_message,
             Intent.GENERAL_QUESTION: self.advisory_module.handle_general_inquiry,
             Intent.UNKNOWN: self.communication_module.handle_unclear_intent
         }

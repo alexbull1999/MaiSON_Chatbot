@@ -6,7 +6,8 @@ class Intent(Enum):
     AVAILABILITY_AND_BOOKING_REQUEST = "availability_and_booking_request"
     PRICE_INQUIRY = "price_inquiry"
     GENERAL_QUESTION = "general_question"
-    SELLER_MESSAGE = "seller_message"
+    BUYER_SELLER_COMMUNICATION = "buyer_seller_communication"
+    NEGOTIATION = "negotiation"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -25,13 +26,16 @@ class IntentClassifier:
                 "Questions about property details, features, or specifications"
             ),
             Intent.AVAILABILITY_AND_BOOKING_REQUEST: (
-                "Questions about property availability, viewing times, or scheduling"
+                "Questions about property availability, viewing times, or scheduling viewings"
             ),
             Intent.PRICE_INQUIRY: (
                 "Questions about property prices, costs, or financial aspects"
             ),
-            Intent.SELLER_MESSAGE: (
-                "Requests to contact or communicate with the property seller"
+            Intent.BUYER_SELLER_COMMUNICATION: (
+                "Direct communication between buyers and sellers about a property"
+            ),
+            Intent.NEGOTIATION: (
+                "Messages related to price negotiations, offers, or counteroffers"
             ),
             Intent.GENERAL_QUESTION: (
                 "General questions about buying or selling properties"
@@ -63,7 +67,8 @@ class IntentClassifier:
             "- \"What are the features of this house?\" -> \"property_inquiry\"\n"
             "- \"When can I view the apartment?\" -> \"availability_and_booking_request\"\n"
             "- \"How much does it cost?\" -> \"price_inquiry\"\n"
-            "- \"Can you ask the seller about parking?\" -> \"seller_message\"\n"
+            "- \"I'd like to make an offer of $500,000\" -> \"negotiation\"\n"
+            "- \"Let me know if you have any questions about the property\" -> \"buyer_seller_communication\"\n"
             "- \"What are good areas to live in London?\" -> \"general_question\"\n"
             "Classify the following message:\n"
         )

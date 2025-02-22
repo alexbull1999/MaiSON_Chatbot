@@ -14,6 +14,18 @@ def test_message_router_initialization():
     assert router.communication_module is not None
 
 
+@pytest.fixture
+def message_router():
+    router = MessageRouter()
+    router.intent_classifier = AsyncMock()
+    router.property_context = AsyncMock()
+    router.advisory_module = AsyncMock()
+    router.communication_module = AsyncMock()
+    router.seller_buyer_communication = AsyncMock()
+    router.context_manager = AsyncMock()
+    return router
+
+
 @pytest.mark.asyncio
 async def test_process_message():
     router = MessageRouter()
@@ -115,3 +127,105 @@ async def test_route_intent_price_inquiry():
         {}
     )
     assert "need a property ID" in response
+
+
+@pytest.mark.asyncio
+async def test_route_property_inquiry(message_router):
+    """Test routing of property inquiry messages."""
+    message_router.intent_classifier.classify.return_value = Intent.PROPERTY_INQUIRY
+    message_router.property_context.handle_inquiry.return_value = "Property details response"
+    
+    response = await message_router.process_message("Tell me about this property")
+    assert response == "Property details response"
+    message_router.property_context.handle_inquiry.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_route_availability_request(message_router):
+    """Test routing of availability request messages."""
+    message_router.intent_classifier.classify.return_value = Intent.AVAILABILITY_AND_BOOKING_REQUEST
+    message_router.property_context.handle_booking.return_value = "Booking response"
+    
+    response = await message_router.process_message("When can I view the property?")
+    assert response == "Booking response"
+    message_router.property_context.handle_booking.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_route_buyer_seller_communication(message_router):
+    """Test routing of buyer-seller communication messages."""
+    message_router.intent_classifier.classify.return_value = Intent.BUYER_SELLER_COMMUNICATION
+    message_router.seller_buyer_communication.handle_message.return_value = "Communication response"
+    
+    context = {
+        "user_id": "buyer123",
+        "role": "buyer",
+        "counterpart_id": "seller456",
+        "property_id": "prop789"
+    }
+    
+    response = await message_router.process_message(
+        "Could you provide more details about the renovation?",
+        context=context
+    )
+    assert response == "Communication response"
+    message_router.seller_buyer_communication.handle_message.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_route_negotiation(message_router):
+    """Test routing of negotiation messages."""
+    message_router.intent_classifier.classify.return_value = Intent.NEGOTIATION
+    message_router.seller_buyer_communication.handle_message.return_value = "Negotiation response"
+    
+    context = {
+        "user_id": "buyer123",
+        "role": "buyer",
+        "counterpart_id": "seller456",
+        "property_id": "prop789"
+    }
+    
+    response = await message_router.process_message(
+        "I would like to make an offer of $450,000",
+        context=context
+    )
+    assert response == "Negotiation response"
+    message_router.seller_buyer_communication.handle_message.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_route_general_chat(message_router):
+    """Test routing of general chat messages."""
+    message_router.intent_classifier.classify.return_value = Intent.GENERAL_QUESTION
+    message_router.advisory_module.handle_general_inquiry.return_value = "General response"
+    
+    response = await message_router.process_message("What are good areas to live in?")
+    assert response == "General response"
+    message_router.advisory_module.handle_general_inquiry.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_enforce_general_chat_restrictions(message_router):
+    """Test that property-specific intents are blocked in general chat."""
+    message_router.intent_classifier.classify.return_value = Intent.PROPERTY_INQUIRY
+    message_router.communication_module.handle_unclear_intent.return_value = (
+        "I can only help with general questions here..."
+    )
+    
+    response = await message_router.route_message(
+        "Tell me about this property",
+        chat_type="general"
+    )
+    
+    assert response["intent"] == Intent.UNKNOWN.value
+    assert "general questions" in response["response"]
+
+
+@pytest.mark.asyncio
+async def test_error_handling(message_router):
+    """Test error handling in message routing."""
+    message_router.intent_classifier.classify.side_effect = Exception("Test error")
+    
+    response = await message_router.process_message("Test message")
+    assert "apologize" in response.lower()
+    assert "error" in response.lower()

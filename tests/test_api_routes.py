@@ -7,6 +7,7 @@ from app.main import app
 from app.api.controllers import chat_controller
 from app.database import get_db
 from app.database.schemas import GeneralChatResponse, PropertyChatResponse
+from app.api.routes import Role
 
 # Create a test client
 client = TestClient(app)
@@ -132,7 +133,8 @@ def test_property_chat_endpoint_success(override_get_db, mock_chat_controller):
         "session_id": "test_session",
         "user_id": "test_user",
         "property_id": "test_property",
-        "seller_id": "test_seller",
+        "role": Role.BUYER.value,
+        "counterpart_id": "test_seller"
     }
 
     # Make request to the endpoint
@@ -141,10 +143,7 @@ def test_property_chat_endpoint_success(override_get_db, mock_chat_controller):
     # Verify response
     assert response.status_code == 200
     response_data = response.json()
-    assert (
-        response_data["message"]
-        == "I can help you with information about this property."
-    )
+    assert response_data["message"] == "I can help you with information about this property."
     assert response_data["intent"] == "property_info"
     assert response_data["session_id"] == "test_session"
     assert "property_context" in response_data
@@ -156,7 +155,7 @@ def test_property_chat_endpoint_missing_required_fields(override_get_db):
     request_data = {
         "message": "Tell me about this property",
         "session_id": "test_session",
-        # Missing user_id, property_id, and seller_id
+        # Missing user_id, property_id, role, and counterpart_id
     }
 
     response = client.post("/api/v1/chat/property", json=request_data)
@@ -195,7 +194,8 @@ def test_property_chat_endpoint_error_handling(override_get_db, mock_chat_contro
         "session_id": "test_session",
         "user_id": "test_user",
         "property_id": "test_property",
-        "seller_id": "test_seller",
+        "role": Role.BUYER.value,
+        "counterpart_id": "test_seller"
     }
 
     response = client.post("/api/v1/chat/property", json=request_data)
