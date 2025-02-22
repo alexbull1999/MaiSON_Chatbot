@@ -7,6 +7,16 @@ All API endpoints require authentication using a bearer token:
 Authorization: Bearer your-api-token
 ```
 
+## Session Management
+
+The API implements intelligent session management with the following features:
+
+- Anonymous users: Sessions expire after 24 hours of inactivity
+- Authenticated users: Sessions expire after 30 days of inactivity
+- Property conversations: Remain active until explicitly closed
+- Session cookies: Automatically managed for anonymous users
+- Session persistence: State is maintained across multiple requests
+
 ## Chat Endpoints
 
 ### General Chat
@@ -40,7 +50,7 @@ Response:
 
 ### Property Chat
 
-Send a property-specific message to the chatbot:
+Send a property-specific message to the chatbot. This endpoint supports bidirectional communication between buyers and sellers:
 
 ```bash
 POST /api/v1/chat/property
@@ -203,14 +213,26 @@ Response:
 }
 ```
 
+## Intent Classification
+
+The API automatically classifies messages into the following intents:
+
+- `property_inquiry`: Questions about property details
+- `availability_and_booking_request`: Viewing and booking requests
+- `price_inquiry`: Questions about pricing
+- `buyer_seller_communication`: Direct communication between parties
+- `negotiation`: Offers and negotiations
+- `general_question`: General inquiries
+- `unknown`: Unclear or unclassified messages
+
 ## Error Handling
 
 The API uses standard HTTP status codes:
 - 200: Success
-- 400: Bad Request
-- 401: Unauthorized
-- 404: Not Found
-- 422: Validation Error
+- 400: Bad Request (invalid parameters)
+- 401: Unauthorized (invalid or missing token)
+- 404: Not Found (invalid conversation or property ID)
+- 422: Validation Error (invalid request body)
 - 500: Internal Server Error
 
 Error response format:
@@ -218,4 +240,11 @@ Error response format:
 {
     "detail": "Error message with additional details"
 }
-``` 
+```
+
+Common error scenarios:
+- Invalid session ID: Returns 401 with new session ID
+- Expired session: Returns 401 with option to start new session
+- Invalid role: Returns 422 with allowed roles
+- Missing counterpart: Returns 400 with required fields
+- Rate limiting: Returns 429 with retry-after header 

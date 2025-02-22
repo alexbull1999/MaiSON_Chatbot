@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MaiSON Chatbot is a microservice-based application designed to handle property-related inquiries and provide intelligent responses. The system is built using FastAPI and follows a modular architecture for maintainability and scalability.
+The MaiSON Chatbot is a microservice-based application designed to handle property-related inquiries and provide intelligent responses. The system is built using FastAPI and follows a modular architecture for maintainability and scalability. It supports both general property inquiries and bidirectional communication between buyers and sellers.
 
 ## Core Components
 
@@ -10,51 +10,133 @@ The MaiSON Chatbot is a microservice-based application designed to handle proper
 - Central component that orchestrates message flow
 - Handles incoming messages and routes them to appropriate modules
 - Manages conversation context and state
+- Enforces chat type restrictions (general vs. property)
+- Supports bidirectional communication routing
 
 ### 2. Intent Classification
-- Analyzes user messages to determine intent
-- Uses keyword-based classification (to be enhanced with ML/NLP)
-- Supports multiple intent types (property inquiry, availability, pricing, etc.)
+- Analyzes user messages to determine intent using LLM
+- Supports multiple intent types:
+  - Property inquiry
+  - Availability and booking
+  - Price inquiry
+  - Buyer-seller communication
+  - Negotiation
+  - General questions
+- Provides confidence scores for intent classification
+- Handles fallback for unclear intents
 
-### 3. Context Management
+### 3. Session Management
+- Manages user sessions with configurable TTLs:
+  - Anonymous sessions (24-hour expiry)
+  - Authenticated sessions (30-day expiry)
+  - Property conversations (no automatic expiry)
+- Handles session cleanup via background tasks
+- Provides session validation and refresh mechanisms
+- Manages cookie-based session tracking
+
+### 4. Context Management
 - Maintains conversation context
 - Tracks current property context
 - Stores conversation history
+- Supports context switching between conversations
+- Preserves context across session refreshes
 
-### 4. Property Context
+### 5. Property Context Module
 - Manages property-related information
 - Handles property queries and updates
 - Maintains property availability status
-
-### 5. Advisory Module
-- Generates property recommendations
-- Provides market analysis
-- Offers property insights
+- Implements caching for property data
+- Integrates with external property services
+- Provides area insights and market analysis
 
 ### 6. Communication Module
 - Handles message formatting
 - Manages response templates
 - Ensures consistent communication style
+- Supports buyer-seller message forwarding
+- Implements notification handling
+- Provides message type classification
+
+### 7. Data Integration
+- Implements caching mechanisms:
+  - Property data cache
+  - Area insights cache
+  - Market data cache
+- Integrates with external services:
+  - Property listings API
+  - OpenStreetMap for location data
+  - Market data providers
+- Manages data refresh and invalidation
+
+### 8. Advisory Module
+- Generates property recommendations
+- Provides market analysis
+- Offers property insights
+- Analyzes area characteristics
+- Generates location-based insights
+- Provides investment advice
 
 ## Database Schema
 
 The application uses SQLAlchemy ORM with the following main tables:
-- Properties
-- AvailabilitySlots
-- Inquiries
+
+### Conversation Tables
+- `general_conversations`: Tracks general chat sessions
+- `general_messages`: Stores messages for general conversations
+- `property_conversations`: Manages buyer-seller communications
+- `property_messages`: Stores property-specific messages
+
+### Property Tables
+- `properties`: Core property information
+- `availability_slots`: Property viewing schedules
+- `inquiries`: User inquiries about properties
+
+### Reference Tables
+- `external_references`: Links to external service data
 
 ## API Endpoints
 
 The service exposes RESTful endpoints for:
-- Chat interactions
-- Property management
-- Availability checking
-- User inquiries
+
+### Chat Operations
+- General chat interactions
+- Property-specific communications
+- Buyer-seller message exchange
+- Conversation history retrieval
+
+### Session Management
+- Session creation and validation
+- Session refresh operations
+- Status updates for conversations
+
+### User Operations
+- User conversation history
+- Role-based conversation filtering
+- Conversation status management
+
+## Security Features
+
+- Bearer token authentication
+- Session-based security
+- CORS protection
+- Rate limiting
+- Secure cookie handling
+- Input validation
+
+## Background Tasks
+
+- Session cleanup (hourly)
+- Cache invalidation
+- Data synchronization
+- Notification processing
 
 ## Future Enhancements
 
-1. Integration with ML/NLP services for better intent classification
-2. Real-time property updates
-3. Integration with external property databases
-4. Enhanced recommendation system
-5. Multi-language support 
+1. Enhanced ML/NLP capabilities for intent classification
+2. Real-time property updates via WebSocket
+3. Integration with additional property databases
+4. Enhanced recommendation system using ML
+5. Multi-language support
+6. Advanced analytics and reporting
+7. Mobile push notifications
+8. Voice interface support 
