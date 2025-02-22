@@ -18,6 +18,7 @@ setup(
         "google-generativeai",
         "tenacity",
         "aiohttp>=3.8.0",
+        "apscheduler",
     ],
     extras_require={
         "test": [
