@@ -1,7 +1,7 @@
 """Add general and property conversation tables
 
 Revision ID: 237e50cbba07
-Revises:
+Revises: 
 Create Date: 2025-02-19 16:26:00.142871
 
 """

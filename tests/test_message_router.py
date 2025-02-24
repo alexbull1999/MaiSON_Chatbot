@@ -207,22 +207,6 @@ async def test_route_general_chat(message_router):
 
 
 @pytest.mark.asyncio
-async def test_enforce_general_chat_restrictions(message_router):
-    """Test that property-specific intents are blocked in general chat."""
-    message_router.intent_classifier.classify.return_value = Intent.PROPERTY_INQUIRY
-    message_router.communication_module.handle_unclear_intent.return_value = (
-        "I can only help with general questions here..."
-    )
-
-    response = await message_router.route_message(
-        "Tell me about this property", chat_type="general"
-    )
-
-    assert response["intent"] == Intent.UNKNOWN.value
-    assert "general questions" in response["response"]
-
-
-@pytest.mark.asyncio
 async def test_error_handling(message_router):
     """Test error handling in message routing."""
     message_router.intent_classifier.classify.side_effect = Exception("Test error")

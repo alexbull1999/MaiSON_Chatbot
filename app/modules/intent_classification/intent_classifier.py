@@ -1,7 +1,9 @@
 from enum import Enum
 from ..llm import LLMClient, LLMProvider
+import re
 
 class Intent(Enum):
+    GREETING = "greeting"
     PROPERTY_INQUIRY = "property_inquiry"
     AVAILABILITY_AND_BOOKING_REQUEST = "availability_and_booking_request"
     PRICE_INQUIRY = "price_inquiry"
@@ -22,6 +24,9 @@ class IntentClassifier:
     def __init__(self):
         self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
         self._intent_descriptions = {
+            Intent.GREETING: (
+                "Initial greetings, hellos, or conversation starters"
+            ),
             Intent.PROPERTY_INQUIRY: (
                 "Questions about property details, features, or specifications"
             ),
@@ -96,3 +101,21 @@ class IntentClassifier:
         except Exception as e:
             print(f"Error in intent classification: {str(e)}")
             return Intent.UNKNOWN 
+
+    async def classify_general(self, message: str) -> Intent:
+        """Simplified classification for general chat - only detects greetings."""
+        greeting_patterns = [
+            r"^hi\b",
+            r"^hello\b",
+            r"^hey\b",
+            r"^good (morning|afternoon|evening)\b",
+            r"^greetings\b",
+            r"^howdy\b",
+            r"^hola\b",
+            r"^welcome\b"
+        ]
+        
+        message_lower = message.lower().strip()
+        if any(re.search(pattern, message_lower) for pattern in greeting_patterns):
+            return Intent.GREETING
+        return Intent.GENERAL_QUESTION 

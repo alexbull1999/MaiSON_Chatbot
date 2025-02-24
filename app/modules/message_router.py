@@ -5,6 +5,7 @@ from .advisory import AdvisoryModule
 from .communication import CommunicationModule
 from .communication.seller_buyer_communication import SellerBuyerCommunicationModule
 from .context_manager import ContextManager
+from .greeting.greeting_module import GreetingModule
 
 
 class MessageRouter:
@@ -15,6 +16,7 @@ class MessageRouter:
         self.communication_module = CommunicationModule()
         self.seller_buyer_communication = SellerBuyerCommunicationModule()
         self.context_manager = ContextManager()
+        self.greeting_module = GreetingModule()
 
     async def process_message(
         self, message: str, context: Optional[Dict] = None
@@ -42,6 +44,7 @@ class MessageRouter:
     async def _route_intent(self, intent: Intent, message: str, context: Dict) -> str:
         """Route the message to the appropriate handler based on intent."""
         intent_handlers = {
+            Intent.GREETING: self.greeting_module.handle_greeting,
             Intent.PROPERTY_INQUIRY: self.property_context.handle_inquiry,
             Intent.AVAILABILITY_AND_BOOKING_REQUEST: self.property_context.handle_booking,
             Intent.PRICE_INQUIRY: self.property_context.handle_pricing,
@@ -61,17 +64,24 @@ class MessageRouter:
     ) -> Dict[str, str]:
         """Route incoming message and return response with metadata."""
         try:
-            # Classify message intent
-            intent = await self.intent_classifier.classify(message)
-
-            # Enforce routing rules based on chat type
             if chat_type == "general":
-                # Only allow GENERAL_QUESTION and UNKNOWN intents for general chat
-                if intent not in [Intent.GENERAL_QUESTION, Intent.UNKNOWN]:
-                    intent = Intent.UNKNOWN
-                    message = "I can only help with general questions here. For property-specific inquiries, please use the property chat endpoint."
-
-            # Get appropriate handler
+                # Use simplified classification for general chat
+                intent = await self.intent_classifier.classify_general(message)
+                
+                # Route to either greeting or advisory module
+                if intent == Intent.GREETING:
+                    response = await self.greeting_module.handle_greeting(message, context)
+                else:
+                    response = await self.advisory_module.handle_general_inquiry(message, context or {})
+                
+                return {
+                    "response": response,
+                    "intent": intent.value,
+                    "context": context or {},
+                }
+            
+            # Normal intent classification for property chat
+            intent = await self.intent_classifier.classify(message)
             response = await self._route_intent(intent, message, context or {})
 
             return {
