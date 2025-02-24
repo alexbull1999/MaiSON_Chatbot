@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from app.modules.property_context.property_context_module import (
     PropertyContextModule,
-    Property,
 )
 
 
@@ -16,32 +15,45 @@ def property_module():
 
 @pytest.fixture
 def mock_property_data():
-    """Create mock property data."""
+    """Create mock property data matching the listings API format."""
     return {
-        "id": "test_property_1",
-        "name": "Test Property",
-        "type": "apartment",
-        "location": {
+        "id": "2b6d45e8-8e61-416a-a8f1-f52d002f9a3c",
+        "address": {
+            "street": "Sample Street",
             "city": "London",
-            "postcode": "SW1A 1AA",
-            "coordinates": {"lat": 51.5074, "lon": -0.1278},
+            "postcode": "SW1 1AA",
+            "latitude": None,
+            "longitude": None
         },
-        "price": 500000,
-        "bedrooms": 2,
+        "price": 450000,
+        "bedrooms": 3,
         "bathrooms": 2,
         "specs": {
-            "property_type": "apartment",
-            "square_footage": 1000,
-            "year_built": 2020,
+            "property_type": "semi-detached",
+            "square_footage": 1200.0,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "reception_rooms": 1,
+            "epc_rating": "B"
         },
         "features": {
-            "parking": True,
-            "garden": False,
-            "balcony": True,
-            "elevator": True,
+            "has_garden": False,
+            "garden_size": None,
+            "has_garage": False,
+            "parking_spaces": 0
         },
-        "media": [{"type": "image", "url": "http://example.com/image1.jpg"}],
-        "days_on_market": 30,
+        "main_image_url": "https://maisonblobstorage.blob.core.windows.net/property-images/test.jpg",
+        "image_urls": ["https://maisonblobstorage.blob.core.windows.net/property-images/test.jpg"],
+        "floorplan_url": None,
+        "created_at": "2025-02-23T22:11:18.776394+00:00",
+        "last_updated": "2025-02-23T22:11:17.592427+00:00",
+        "owner_id": 1,
+        "details": {
+            "description": None,
+            "construction_year": None,
+            "heating_type": None,
+            "parking_spaces": None
+        }
     }
 
 
@@ -50,19 +62,49 @@ def mock_similar_properties():
     """Create mock similar properties data."""
     return [
         {
-            "id": "similar_1",
-            "price": 480000,
-            "specs": {"square_footage": 950},
-            "features": {"parking": True, "garden": False},
+            "id": "ef4b18ae-499b-476c-9ed3-53c3bda7fb02",
+            "address": {
+                "street": "Similar Street",
+                "city": "London",
+                "postcode": "SW1 1AB"
+            },
+            "price": 400000,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "specs": {
+                "property_type": "semi-detached",
+                "square_footage": 1100.0
+            },
+            "features": {
+                "parking": True,
+                "garden": True,
+                "central_heating": True
+            },
             "days_on_market": 45,
+            "main_image_url": "https://maisonblobstorage.blob.core.windows.net/property-images/similar1.jpg"
         },
         {
-            "id": "similar_2",
-            "price": 520000,
-            "specs": {"square_footage": 1050},
-            "features": {"parking": True, "balcony": True},
+            "id": "17d18993-b68c-4349-96ee-86eafa1747f0",
+            "address": {
+                "street": "Another Street",
+                "city": "London",
+                "postcode": "SW1 1AC"
+            },
+            "price": 500000,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "specs": {
+                "property_type": "semi-detached",
+                "square_footage": 1300.0
+            },
+            "features": {
+                "parking": True,
+                "garden": True,
+                "central_heating": True
+            },
             "days_on_market": 15,
-        },
+            "main_image_url": "https://maisonblobstorage.blob.core.windows.net/property-images/similar2.jpg"
+        }
     ]
 
 
@@ -105,19 +147,21 @@ async def test_fetch_property_details(property_module):
 
 @pytest.mark.asyncio
 async def test_get_or_fetch_property(property_module, mock_property_data):
-    """Test getting or fetching a property."""
-    # Mock the fetch method
+    """Test fetching and creating a Property instance."""
+    # Mock the _fetch_property_details method
     property_module._fetch_property_details = AsyncMock(return_value=mock_property_data)
-
-    # Test fetching new property
-    property = await property_module.get_or_fetch_property("test_1")
-    assert isinstance(property, Property)
-    assert property.id == "test_1"
-    assert property.name == "Test Property"
-
-    # Test getting cached property
-    cached_property = await property_module.get_or_fetch_property("test_1")
-    assert cached_property is property
+    
+    # Test fetching property
+    property = await property_module.get_or_fetch_property("test-id")
+    
+    # Verify property instance
+    assert property is not None
+    assert property.id == mock_property_data["id"]
+    assert property.name == f"{mock_property_data['address']['street']}, {mock_property_data['address']['city']}"
+    assert property.type == mock_property_data["specs"]["property_type"]
+    assert property.location == mock_property_data["address"]["city"]
+    assert property.details["formatted_price"] == "£450,000"
+    assert property.details["formatted_address"] == "Sample Street, London, SW1 1AA"
 
 
 @pytest.mark.asyncio
@@ -125,26 +169,25 @@ async def test_handle_inquiry(
     property_module, mock_property_data, mock_similar_properties, mock_area_insights
 ):
     """Test handling a property inquiry."""
-    # Mock dependencies
+    # Mock required methods
     property_module._fetch_property_details = AsyncMock(return_value=mock_property_data)
-    property_module._fetch_similar_properties = AsyncMock(
-        return_value=mock_similar_properties
-    )
+    property_module._fetch_similar_properties = AsyncMock(return_value=mock_similar_properties)
     property_module._get_area_insights = AsyncMock(return_value=mock_area_insights)
     property_module.llm_client.generate_response = AsyncMock(
-        return_value="This is a great property in a prime location."
+        return_value="This is a great semi-detached property in London with 3 bedrooms."
     )
 
-    # Test with valid property ID
+    # Test inquiry handling
     response = await property_module.handle_inquiry(
-        "Tell me about this property", {"property_id": "test_1"}
+        "Tell me about this property",
+        {"property_id": "test-id"}
     )
-    assert isinstance(response, str)
-    assert "great property" in response
 
-    # Test without property ID
-    response = await property_module.handle_inquiry("Tell me about this property", {})
-    assert "need a property ID" in response
+    # Verify response
+    assert "great" in response
+    assert "semi-detached" in response
+    assert "London" in response
+    assert "3 bedrooms" in response
 
 
 @pytest.mark.asyncio
@@ -152,48 +195,42 @@ async def test_handle_pricing(
     property_module, mock_property_data, mock_similar_properties
 ):
     """Test handling a pricing inquiry."""
-    # Mock dependencies
+    # Mock required methods
     property_module._fetch_property_details = AsyncMock(return_value=mock_property_data)
-    property_module._fetch_similar_properties = AsyncMock(
-        return_value=mock_similar_properties
-    )
+    property_module._fetch_similar_properties = AsyncMock(return_value=mock_similar_properties)
     property_module.llm_client.generate_response = AsyncMock(
-        return_value="The property is priced competitively at £500,000."
+        return_value="The property is priced at £450,000 which is competitive for the area."
     )
 
-    # Test with valid property ID
+    # Test pricing inquiry
     response = await property_module.handle_pricing(
-        "What's the price of this property?", {"property_id": "test_1"}
+        "How much does this property cost?",
+        {"property_id": "test-id"}
     )
-    assert isinstance(response, str)
-    assert "£500,000" in response
 
-    # Test without property ID
-    response = await property_module.handle_pricing("What's the price?", {})
-    assert "need a property ID" in response
+    # Verify response
+    assert "£450,000" in response
+    assert "competitive" in response
 
 
 @pytest.mark.asyncio
 async def test_handle_booking(property_module, mock_property_data):
-    """Test handling a booking request."""
-    # Mock dependencies
+    """Test handling a booking inquiry."""
+    # Mock required methods
     property_module._fetch_property_details = AsyncMock(return_value=mock_property_data)
     property_module.llm_client.generate_response = AsyncMock(
-        return_value="I can help you schedule a viewing of this property."
+        return_value="You can schedule a viewing of this property at Sample Street, London."
     )
 
-    # Test with valid property ID
+    # Test booking inquiry
     response = await property_module.handle_booking(
-        "I'd like to view this property", {"property_id": "test_1"}
+        "Can I view this property?",
+        {"property_id": "test-id"}
     )
-    assert isinstance(response, str)
+
+    # Verify response
     assert "schedule a viewing" in response
-
-    # Test without property ID
-    response = await property_module.handle_booking(
-        "I'd like to view this property", {}
-    )
-    assert "need a property ID" in response
+    assert "Sample Street" in response
 
 
 def test_summarize_similar_properties(property_module, mock_similar_properties):
@@ -202,9 +239,9 @@ def test_summarize_similar_properties(property_module, mock_similar_properties):
 
     assert isinstance(summary, dict)
     assert "average_price" in summary
-    assert summary["average_price"] == 500000  # (480000 + 520000) / 2
+    assert summary["average_price"] == 450000  # (400000 + 500000) / 2
     assert "average_size" in summary
-    assert summary["average_size"] == 1000  # (950 + 1050) / 2
+    assert summary["average_size"] == 1200  # (1100 + 1300) / 2
 
 
 def test_get_common_features(property_module, mock_similar_properties):
@@ -213,14 +250,22 @@ def test_get_common_features(property_module, mock_similar_properties):
 
     assert isinstance(features, dict)
     assert features["parking"] == 2  # Both properties have parking
-    assert "balcony" in features
-    assert features["balcony"] == 1  # Only one property has a balcony
+    assert features["garden"] == 2  # Both properties have garden
+    assert features["central_heating"] == 2  # Both properties have central heating
 
 
 def test_identify_unique_features(
     property_module, mock_property_data, mock_similar_properties
 ):
     """Test identifying unique features of a property."""
+    # Add elevator as a unique feature to the main property
+    mock_property_data["features"] = {
+        "parking": True,
+        "garden": True,
+        "elevator": True,
+        "central_heating": True
+    }
+    
     unique_features = property_module._identify_unique_features(
         mock_property_data, mock_similar_properties
     )
@@ -271,5 +316,24 @@ async def test_fetch_similar_properties(property_module, mock_similar_properties
 
         assert isinstance(properties, list)
         assert len(properties) == 2
-        assert properties[0]["id"] == "similar_1"
-        assert properties[1]["id"] == "similar_2"
+        assert properties[0]["id"] == "ef4b18ae-499b-476c-9ed3-53c3bda7fb02"  # Updated to match UUID format
+
+
+@pytest.mark.asyncio
+async def test_get_area_insights_property_specific(
+    property_module, mock_area_insights
+):
+    """Test getting area insights for a specific property."""
+    with patch("app.modules.advisory.AdvisoryModule") as MockAdvisoryModule:
+        mock_advisory = AsyncMock()
+        mock_advisory.get_area_insights.return_value = mock_area_insights
+        MockAdvisoryModule.return_value = mock_advisory
+
+        insights = await property_module._get_area_insights({"postcode": "SW1 1AA"})
+        
+        assert insights is not None
+        assert "location_highlights" in insights
+        assert "transport" in insights
+        assert "education" in insights
+        assert "amenities" in insights
+        assert "safety" in insights

@@ -1,7 +1,7 @@
 from typing import Dict, Optional, List
 import aiohttp
 from ..llm import LLMClient, LLMProvider
-from ..data_integration.cache import cache_property_data, default_cache as cache
+from ..data_integration.cache import cache_property_data
 
 class Property:
     """Class representing a property with its details."""
@@ -22,38 +22,46 @@ class PropertyContextModule:
 
     @cache_property_data
     async def _fetch_property_details(self, property_id: str) -> Optional[Dict]:
-        """Fetch property details from the listings microservice."""
+        """Fetch property details from the listings API."""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.listings_api_url}/properties/{property_id}") as response:
-                    if response.status == 200:
-                        return await response.json()
-                    return None
+                url = f"{self.listings_api_url}/api/properties/{property_id}"
+                headers = {"Content-Type": "application/json", "Accept": "application/json"}
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 404:
+                        return None
+                    if response.status != 200:
+                        raise Exception(f"Failed to fetch property details: {response.status}")
+                    return await response.json()
         except Exception as e:
             print(f"Error fetching property details: {str(e)}")
             return None
 
     async def get_or_fetch_property(self, property_id: str) -> Optional[Property]:
-        """Get property from cache or fetch from API."""
-        # Try to get Property object from cache first
-        cached_property = cache.get_property(property_id)
-        if isinstance(cached_property, Property):
-            return cached_property
-        
-        # If not in cache or not a Property object, fetch from API
-        details = await self._fetch_property_details(property_id)
-        if details:
-            property = Property(
-                id=property_id,
-                name=details.get("name", "Unknown Property"),
-                type=details.get("type", "Unknown Type"),
-                location=details.get("location", "Unknown Location"),
-                details=details
+        """Get property details from cache or fetch from API."""
+        try:
+            property_data = await self._fetch_property_details(property_id)
+            if not property_data:
+                return None
+
+            # Create Property instance from API response
+            property_instance = Property(
+                id=property_data["id"],  # Now using UUID from API
+                name=f"{property_data['address']['street']}, {property_data['address']['city']}",
+                type=property_data['specs']['property_type'],
+                location=property_data['address']['city'],
+                details={
+                    **property_data,
+                    'formatted_price': f"£{property_data['price']:,}",
+                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"  # NOQA: E501
+                }
             )
-            # Store the Property object in cache
-            cache.set_property(property_id, property)
-            return property
-        return None
+            self.current_property = property_instance
+            return property_instance
+
+        except Exception as e:
+            print(f"Error in get_or_fetch_property: {str(e)}")
+            return None
 
     async def handle_inquiry(self, message: str, context: Optional[Dict] = None) -> str:
         """
@@ -351,24 +359,23 @@ class PropertyContextModule:
     ) -> List[Dict]:
         """Fetch similar properties from the listings API."""
         try:
-            query_params = {
-                "city": location,
-                "property_type": property_type,
-                "bedrooms": bedrooms
+            params = {
+                'property_type': property_type.lower(),
+                'min_bedrooms': bedrooms,
+                'city': location
             }
             if price_range:
-                query_params.update({
-                    "min_price": price_range[0],
-                    "max_price": price_range[1]
-                })
+                params['min_price'] = price_range[0]
+                params['max_price'] = price_range[1]
 
             async with aiohttp.ClientSession() as session:
-                params = "&".join(f"{k}={v}" for k, v in query_params.items() if v is not None)
-                url = f"{self.listings_api_url}/properties?{params}"
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        return await response.json()
-                    return []
+                url = f"{self.listings_api_url}/api/properties"
+                headers = {"Content-Type": "application/json", "Accept": "application/json"}
+                async with session.get(url, params=params, headers=headers) as response:
+                    if response.status != 200:
+                        raise Exception(f"Failed to fetch similar properties: {response.status}")
+                    data = await response.json()
+                    return data if isinstance(data, list) else []
         except Exception as e:
             print(f"Error fetching similar properties: {str(e)}")
             return []
