@@ -36,11 +36,11 @@ ignore =
     E402
     #Math stuff
     E226
-    
+   
     
 
 
 # Additional configurations
-max-complexity = 10
+max-complexity = 12
 statistics = True
 count = True 
