@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 from enum import Enum
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 
 
 class MessageType(Enum):
@@ -24,7 +24,7 @@ class CommunicationModule:
             ],
         }
         # Initialize LLM client with Gemini provider
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
 
     def format_message(self, message_type: MessageType, **kwargs) -> str:
         """Format a message based on the message type and provided parameters."""

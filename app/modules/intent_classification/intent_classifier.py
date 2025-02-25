@@ -1,5 +1,5 @@
 from enum import Enum
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 import re
 
 class Intent(Enum):
@@ -22,7 +22,7 @@ class Intent(Enum):
 
 class IntentClassifier:
     def __init__(self):
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
         self._intent_descriptions = {
             Intent.GREETING: (
                 "Initial greetings, hellos, or conversation starters"

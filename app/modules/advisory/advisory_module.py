@@ -1,12 +1,12 @@
 from typing import List, Dict, Optional
 from datetime import datetime
 from app.modules.property_context.property_context_module import Property
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 from ..data_integration.property_data_service import PropertyDataService
 
 class AdvisoryModule:
     def __init__(self):
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
         self.data_service = PropertyDataService()
         self.recommendations: Dict[str, List[str]] = {}
         self.zoopla_api_key = None  # To be configured from environment variables

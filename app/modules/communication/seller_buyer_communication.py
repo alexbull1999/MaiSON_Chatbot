@@ -2,14 +2,14 @@ from typing import Dict, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 from ...database.models import ExternalReference
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 
 
 class SellerBuyerCommunicationModule:
     """Module for handling communication between sellers and buyers."""
 
     def __init__(self):
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
 
     async def handle_message(self, message: str, context: Dict) -> str:
         """

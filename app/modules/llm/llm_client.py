@@ -37,7 +37,7 @@ class LLMClient:
         api_key = settings.google_api_key
         if api_key and api_key != "dummy-key":
             genai.configure(api_key=api_key)
-            self.clients[LLMProvider.GEMINI] = genai.GenerativeModel('gemini-pro')
+            self.clients[LLMProvider.GEMINI] = genai.GenerativeModel('gemini-2.0-flash')
 
     def _get_mock_response(self, messages: List[Dict[str, str]]) -> str:
         """Generate a mock response for testing purposes."""
@@ -182,7 +182,7 @@ class LLMClient:
             })
 
         response = await self.clients[LLMProvider.OPENAI].chat.completions.create(
-            model="gpt-4-turbo-preview",  # or gpt-3.5-turbo for lower cost
+            model="gpt-4o-latest",  # or gpt-3.5-turbo for lower cost
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens

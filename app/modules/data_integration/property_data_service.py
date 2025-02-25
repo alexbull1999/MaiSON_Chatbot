@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 import aiohttp
 from datetime import datetime
 import logging
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 import json
 from app.models.property_data import (
     PropertyPrice,
@@ -31,7 +31,7 @@ class PropertyDataService:
         self.session = None
         self.last_request_time = {}
         self.settings = settings
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp session."""

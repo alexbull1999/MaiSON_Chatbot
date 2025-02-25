@@ -1,12 +1,12 @@
 from typing import Dict, Optional
 import random
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 
 class GreetingModule:
     """Module for handling greeting messages with personalized responses."""
     
     def __init__(self):
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
         self.greeting_templates = [
             "Hello! Welcome to MaiSON. How can I assist you with your property search today?",
             "Hi there! I'm your MaiSON property assistant. What kind of property information are you looking for?",

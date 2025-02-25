@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List
 import aiohttp
-from ..llm import LLMClient, LLMProvider
+from ..llm import LLMClient
 from ..data_integration.cache import cache_property_data
 
 class Property:
@@ -17,7 +17,7 @@ class PropertyContextModule:
     
     def __init__(self):
         self.current_property: Optional[Property] = None
-        self.llm_client = LLMClient(provider=LLMProvider.GEMINI)
+        self.llm_client = LLMClient()
         self.listings_api_url = "https://maison-api.jollybush-a62cec71.uksouth.azurecontainerapps.io"
 
     @cache_property_data
