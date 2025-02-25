@@ -102,6 +102,14 @@ async def test_handle_general_inquiry_with_location(
     assert isinstance(response, str)
     assert len(response) > 0
     mock_property_data_service.get_area_insights.assert_called_once()
+    
+    # Verify LLM client was called twice (area analysis and final response)
+    assert mock_llm_client.generate_response.call_count == 2
+    
+    # Verify both calls used the correct module_name
+    call_args_list = mock_llm_client.generate_response.call_args_list
+    for call_args in call_args_list:
+        assert call_args[1].get('module_name') == 'advisory'
 
 
 @pytest.mark.asyncio
@@ -120,6 +128,10 @@ async def test_handle_general_inquiry_without_location(
 
     assert isinstance(response, str)
     assert len(response) > 0
+    mock_llm_client.generate_response.assert_called_once()
+    # Verify module_name parameter
+    call_args = mock_llm_client.generate_response.call_args[1]
+    assert call_args.get('module_name') == 'advisory'
 
 
 @pytest.mark.asyncio
@@ -186,20 +198,30 @@ def test_get_market_analysis():
 @pytest.mark.asyncio
 async def test_location_extraction(advisory_module):
     """Test location extraction from queries."""
+    # Mock LLM client for location extraction
+    advisory_module.llm_client.generate_response = AsyncMock()
+    
     # Test with postcode
+    advisory_module.llm_client.generate_response.return_value = "SW1A 1AA"
     location = await advisory_module._extract_location(
         "What's the property market like in SW1A 1AA?"
     )
     assert location == "SW1A 1AA"
 
     # Test with city name
+    advisory_module.llm_client.generate_response.return_value = "Manchester"
     location = await advisory_module._extract_location(
         "Tell me about properties in Manchester"
     )
     assert location == "Manchester"
 
     # Test with area name
+    advisory_module.llm_client.generate_response.return_value = "North London"
     location = await advisory_module._extract_location(
         "What's the market like in North London?"
     )
     assert location == "North London"
+
+    # Verify module_name parameter was used
+    for call_args in advisory_module.llm_client.generate_response.call_args_list:
+        assert call_args[1].get('module_name') == 'advisory'

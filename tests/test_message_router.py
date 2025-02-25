@@ -77,7 +77,7 @@ async def test_route_intent_property_inquiry():
     response = await router._route_intent(
         Intent.PROPERTY_INQUIRY, "Tell me about this property", {}
     )
-    assert "need a property ID" in response
+    assert any(phrase in response.lower() for phrase in ["specific property", "property id"])
 
 
 @pytest.mark.asyncio
@@ -118,7 +118,7 @@ async def test_route_intent_price_inquiry():
     response = await router._route_intent(
         Intent.PRICE_INQUIRY, "How much does it cost?", {}
     )
-    assert "need a property ID" in response
+    assert "specific property" in response.lower() or "property id" in response.lower()
 
 
 @pytest.mark.asyncio

@@ -103,94 +103,90 @@ class AdvisoryModule:
         return response
 
     async def _generate_area_analysis(self, location: str, insights: Dict) -> str:
-        """Generate natural language analysis for a broad area."""
-        prompt = (
-            f"Analyze this area ({location}) based on the following data.\n\n"
-            f"Market Overview:\n"
-            f"- Average Price: {insights.get('market_overview', {}).get('average_price')}\n"
-            f"- Annual Change: {insights.get('market_overview', {}).get('annual_change')}%\n"
-            f"- Five Year Change: {insights.get('market_overview', {}).get('five_year_change')}%\n"
-            f"- Market Activity: {insights.get('market_overview', {}).get('market_activity')} sales\n\n"
-            f"Area Profile:\n"
-            f"- Demographics: {insights.get('area_profile', {}).get('demographics', {})}\n"
-            f"- Crime Rate: {insights.get('area_profile', {}).get('crime_rate')}\n"
-            f"- Amenities: {insights.get('area_profile', {}).get('amenities_summary', {})}\n"
-            f"- Transport: {insights.get('area_profile', {}).get('transport_summary', {})}\n"
-            f"- Education: {insights.get('area_profile', {}).get('education', {})}\n\n"
-            f"Please provide a comprehensive analysis focusing on:\n"
-            f"1. Overall area characteristics and lifestyle\n"
-            f"2. Property market trends and investment potential\n"
-            f"3. Transport and connectivity\n"
-            f"4. Local amenities and facilities\n"
-            f"5. Demographics and community\n"
-            f"6. Education options\n"
-            f"7. Safety and security"
-        )
-        
-        response = await self.llm_client.generate_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        return response
-
-    async def handle_general_inquiry(self, message: str, context: Optional[Dict] = None) -> str:
-        """Handle general real estate inquiries with data-backed responses."""
+        """Generate a natural language analysis of an area based on insights."""
         try:
-            # Extract location from message using LLM
-            location = await self._extract_location(message)
-            
-            if location:
-                # Get area insights
-                insights = await self.get_area_insights(location)
-                
-                # Generate comprehensive response
-                prompt = (
-                    f"User question: {message}\n"
-                    f"Area insights: {insights}\n\n"
-                    "Please provide a helpful response that addresses the user's question "
-                    "using the area insights and your general knowledge. Include specific "
-                    "data points where available, and provide balanced, practical advice."
-                )
-                
-                response = await self.llm_client.generate_response(
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7
-                )
-                return response
-            else:
-                # Handle general questions without location context
-                return await self.llm_client.generate_response(
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are an AI real estate advisor. Provide helpful, specific, correct advice based on your general knowledge."
-                        },
-                        {"role": "user", "content": message}
-                    ],
-                    temperature=0.7
-                )
-                
-        except Exception as e:
-            print(f"Error handling general inquiry: {str(e)}")
-            return (
-                "I apologize, but I'm having trouble processing your inquiry. "
-                "Could you please rephrase your question?"
+            prompt = (
+                f"Analyze this area ({location}) based on the following data.\n\n"
+                f"Market Overview:\n"
+                f"- Average Price: {insights.get('market_data', {}).get('average_price')}\n"
+                f"- Annual Change: {insights.get('market_data', {}).get('annual_change')}%\n"
+                f"- Five Year Change: {insights.get('market_data', {}).get('five_year_change')}%\n"
+                f"- Market Activity: {insights.get('market_data', {}).get('sales_volume')} sales\n\n"
+                f"Area Profile:\n"
+                f"- Demographics: {insights.get('demographics', {})}\n"
+                f"- Crime Rate: {insights.get('crime_rate')}\n"
+                f"- Amenities: {insights.get('amenities', {})}\n"
+                f"- Transport: {insights.get('transport', {})}\n"
+                f"- Education: {insights.get('education', {})}\n\n"
+                "Please provide a comprehensive analysis focusing on:\n"
+                "1. Overall area characteristics and lifestyle\n"
+                "2. Property market trends and investment potential\n"
+                "3. Transport and connectivity\n"
+                "4. Local amenities and facilities\n"
+                "5. Demographics and community\n"
+                "6. Education options\n"
+                "7. Safety and security"
             )
 
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                module_name="advisory"
+            )
+            return response
+
+        except Exception as e:
+            print(f"Error generating area analysis: {str(e)}")
+            return "I apologize, but I couldn't generate an analysis for this area at the moment."
+
+    async def handle_general_inquiry(self, message: str, context: Optional[Dict] = None) -> str:
+        """Handle general inquiries about real estate and the market."""
+        try:
+            # Try to extract location from the message
+            location = await self._extract_location(message)
+            
+            # If we found a location, get area insights
+            area_insights = {}
+            if location:
+                area_insights = await self.get_area_insights(location)
+            
+            # Prepare the prompt with area insights if available
+            prompt = f"User question: {message}\n"
+            if area_insights:
+                prompt += f"\nArea Information:\n{area_insights}\n"
+            prompt += "\nPlease provide a detailed response about the inquiry."
+            
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                module_name="advisory"
+            )
+            return response
+            
+        except Exception as e:
+            print(f"Error in advisory module: {str(e)}")
+            return "I apologize, but I encountered an error processing your inquiry. Please try again."
+
     async def _extract_location(self, message: str) -> Optional[str]:
-        """Extract location information from user message using LLM."""
-        prompt = (
-            "Extract the location or area mentioned in this message. "
-            "Return ONLY the location name, or 'None' if no location is mentioned.\n\n"
-            f"Message: {message}"
-        )
-        
-        response = await self.llm_client.generate_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3  # Lower temperature for more precise extraction
-        )
-        
-        return response if response.lower() != "none" else None
+        """Extract location information from a message using LLM."""
+        try:
+            prompt = (
+                "Extract the location or area mentioned in this message. "
+                "Return ONLY the location name, or 'None' if no location is mentioned.\n\n"
+                f"Message: {message}"
+            )
+            
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                module_name="advisory"
+            )
+            
+            return response.strip() if response.lower() != "none" else None
+
+        except Exception as e:
+            print(f"Error extracting location: {str(e)}")
+            return None
 
     def get_property_recommendations(self, user_preferences: dict) -> List[Dict]:
         """Get property recommendations based on user preferences and market data."""

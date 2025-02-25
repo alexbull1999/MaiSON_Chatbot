@@ -82,5 +82,9 @@ async def test_generate_response():
             char in ".!?" for char in response[-1:]
         ), "Response should end with proper punctuation"
 
-        # Verify LLM was called correctly
+        # Verify LLM was called correctly with proper parameters
         mock_llm.generate_response.assert_called_once()
+        call_args = mock_llm.generate_response.call_args
+        assert isinstance(call_args[1].get('messages'), list)
+        assert call_args[1].get('module_name') == 'communication'
+        assert call_args[1].get('temperature') == 0.7

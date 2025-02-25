@@ -42,77 +42,47 @@ class CommunicationModule:
             print("Error formatting message")
             return "I apologize, but I couldn't format the response correctly."
 
-    async def generate_response(self, intent: str, context: dict) -> str:
-        """Generate a response based on the intent and context using the LLM."""
-        if not context:
-            return self.format_message(MessageType.ERROR)
-
+    async def generate_response(self, intent: str, context: Optional[Dict] = None) -> str:
+        """Generate a response based on intent and context using LLM."""
         try:
-            # Prepare conversation history for LLM
-            messages = []
-
-            # Add conversation history if available
-            if "conversation_history" in context:
-                for msg in context["conversation_history"]:
-                    messages.append(
-                        {
-                            "role": "user" if msg["role"] == "user" else "assistant",
-                            "content": msg["content"],
-                        }
-                    )
-
-            # Add current query with intent and context
-            current_query = {
-                "role": "user",
-                "content": (
-                    f"Intent: {intent}\n"
-                    f"Context: {str(context)}\n"
-                    "Please provide a response based on this information."
-                ),
-            }
-            messages.append(current_query)
-
-            # Generate response using LLM
-            response = await self.llm_client.generate_response(
-                messages=messages, temperature=0.7, max_tokens=300
+            prompt = (
+                f"Intent: {intent}\n"
+                f"Context: {context}\n"
+                "Please provide a response based on this information."
             )
-
-            if not response:
-                return self.format_message(MessageType.ERROR)
-
+            
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=300,
+                module_name="communication"
+            )
+            
             return response
-
-        except Exception:
-            # Log the error and return a fallback response
-            print("Error generating LLM response")
-            return f"I understand you're interested in {intent}. Let me help you with that."
+        except Exception as e:
+            print(f"Error generating response: {str(e)}")
+            return self.format_message(MessageType.ERROR)
 
     async def handle_unclear_intent(
         self, message: str, context: Optional[Dict] = None
     ) -> str:
         """Handle messages with unclear intent."""
         try:
+            prompt = (
+                f"User message: {message}\n"
+                "The intent of this message is unclear. Please provide a helpful response "
+                "that guides the user towards expressing their property-related needs more clearly."
+            )
+            
             response = await self.llm_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a helpful real estate assistant. "
-                            "The user's intent is unclear. "
-                            "Try to understand their needs and provide relevant assistance."
-                        ),
-                    },
-                    {"role": "user", "content": message},
-                ],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
+                module_name="communication"
             )
             return response
-        except Exception:
-            return (
-                "I'm not quite sure what you're asking. "
-                "Could you please rephrase your question or specify what kind of "
-                "property information you're looking for?"
-            )
+        except Exception as e:
+            print(f"Error handling unclear intent: {str(e)}")
+            return self.format_message(MessageType.ERROR)
 
     async def generate_property_description(self, property_data: Dict) -> str:
         """

@@ -64,103 +64,132 @@ class PropertyContextModule:
             return None
 
     async def handle_inquiry(self, message: str, context: Optional[Dict] = None) -> str:
-        """
-        Handle property-specific inquiries with comprehensive property and area analysis.
-        Combines data from:
-        - Property details from listings API
-        - Similar properties in the area
-        - Local area insights (schools, transport, amenities)
-        - Crime statistics and safety information
-        - Market trends and neighborhood characteristics
-        """
+        """Handle property-specific inquiries."""
         try:
-            if not context or "property_id" not in context:
-                return "I need a property ID to provide specific information. Please try again with a property selected."
+            if not context or 'property_id' not in context:
+                return "I need a specific property to answer your question. Could you please provide a property ID?"
 
-            property = await self.get_or_fetch_property(context["property_id"])
-            if not property:
-                return "I couldn't find information about this property. Please try again later."
+            property_data = await self.get_or_fetch_property(context['property_id'])
+            if not property_data:
+                return "I'm sorry, but I couldn't find that property in our database."
 
-            # Get similar properties for comparison
+            # Get area insights
+            area_insights = await self._get_area_insights(property_data.details.get('location', {}))
+            
+            # Get similar properties for context
             similar_properties = await self._fetch_similar_properties(
-                location=property.details.get("location", {}).get("city", ""),
-                property_type=property.details.get("specs", {}).get("property_type", "Unknown"),
-                bedrooms=property.details.get("bedrooms", 0),
-                price_range=None  # Don't limit by price for general inquiries
+                property_data.location,
+                property_data.type,
+                property_data.details.get('bedrooms', 0)
             )
-
-            # Get area insights using AdvisoryModule's functionality
-            area_insights = await self._get_area_insights(property.details.get("location", {}))
-
-            # Prepare comprehensive property and area analysis
-            analysis_data = {
-                "property_details": {
-                    "basic_info": {
-                        "name": property.name,
-                        "type": property.type,
-                        "bedrooms": property.details.get("bedrooms"),
-                        "bathrooms": property.details.get("bathrooms"),
-                        "square_footage": property.details.get("specs", {}).get("square_footage")
-                    },
-                    "location": property.details.get("location", {}),
-                    "features": property.details.get("features", {}),
-                    "specifications": property.details.get("specs", {}),
-                    "media": property.details.get("media", [])
-                },
-                "similar_properties": {
-                    "count": len(similar_properties),
-                    "summary": self._summarize_similar_properties(similar_properties),
-                    "unique_features": self._identify_unique_features(property.details, similar_properties)
-                },
-                "area_insights": {
-                    "location_highlights": area_insights.get("location_highlights", {}),
-                    "transport": {
-                        "nearby_stations": area_insights.get("transport", {}).get("stations", []),
-                        "connectivity_score": area_insights.get("transport", {}).get("connectivity_score")
-                    },
-                    "education": {
-                        "schools": area_insights.get("education", {}).get("schools", []),
-                        "school_ratings": area_insights.get("education", {}).get("ratings", {})
-                    },
-                    "amenities": area_insights.get("amenities", {}),
-                    "safety": {
-                        "crime_rate": area_insights.get("safety", {}).get("crime_rate"),
-                        "safety_score": area_insights.get("safety", {}).get("safety_score")
-                    }
-                }
-            }
+            
+            # Prepare comprehensive prompt with all available information
+            prompt = (
+                f"Property Details:\n{property_data}\n\n"
+                f"Area Information:\n{area_insights}\n\n"
+                f"Similar Properties in the Area:\n{self._summarize_similar_properties(similar_properties)}\n\n"
+                f"User Question: {message}\n\n"
+                "Please provide a detailed response focusing specifically on answering the user's question. "
+                "Include relevant information from the property details, area insights, and market context "
+                "where it directly relates to their inquiry."
+            )
 
             response = await self.llm_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert real estate agent with deep knowledge of properties and local areas. "
-                            "Analyze the provided property details and area insights to give comprehensive, "
-                            "informative responses. Consider:\n"
-                            "1. Property features and unique selling points\n"
-                            "2. How it compares to similar properties\n"
-                            "3. Local area characteristics and amenities\n"
-                            "4. Transport links and connectivity\n"
-                            "5. Schools and education options\n"
-                            "6. Safety and community aspects\n\n"
-                            "Provide specific, factual information when available, and use your general knowledge "
-                            "to give context and insights about the area and property type. Be engaging but professional."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Property and Area Analysis:\n{analysis_data}\n\nUser Question: {message}"
-                    }
-                ],
-                temperature=0.7
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                module_name="property_context"
             )
-
             return response
 
         except Exception as e:
-            print(f"Error in property inquiry handler: {str(e)}")
-            return "I apologize, but I'm having trouble accessing the property information. Please try again later."
+            print(f"Error handling property inquiry: {str(e)}")
+            return "I apologize, but I encountered an error processing your inquiry. Please try again."
+
+    async def handle_pricing(self, message: str, context: Optional[Dict] = None) -> str:
+        """Handle pricing-related inquiries."""
+        try:
+            if not context or 'property_id' not in context:
+                return "I need a specific property to discuss pricing. Could you please provide a property ID?"
+
+            property_data = await self.get_or_fetch_property(context['property_id'])
+            if not property_data:
+                return "I'm sorry, but I couldn't find that property in our database."
+
+            # Get similar properties for price comparison
+            similar_properties = await self._fetch_similar_properties(
+                property_data.location,
+                property_data.type,
+                property_data.details.get('bedrooms', 0)
+            )
+
+            # Get area insights for market context
+            area_insights = await self._get_area_insights(property_data.details.get('location', {}))
+
+            # Analyze market conditions
+            market_analysis = self._analyze_market_conditions(similar_properties)
+            price_stats = self._get_price_range(similar_properties)
+            avg_price_sqft = self._calculate_avg_price_per_sqft(similar_properties)
+
+            prompt = (
+                f"Property Details:\n{property_data}\n\n"
+                f"Market Analysis:\n"
+                f"- Market Speed: {market_analysis.get('market_speed')}\n"
+                f"- Competition Level: {market_analysis.get('competition_level')}\n"
+                f"- Average Days on Market: {market_analysis.get('avg_days_on_market')}\n"
+                f"- Price Range in Area: £{price_stats.get('min')} - £{price_stats.get('max')}\n"
+                f"- Average Price per Sqft: £{avg_price_sqft}\n\n"
+                f"Area Information:\n{area_insights}\n\n"
+                f"Similar Properties Summary:\n{self._summarize_similar_properties(similar_properties)}\n\n"
+                f"User Question: {message}\n\n"
+                "Please provide a detailed response about the property's pricing, "
+                "using the market analysis and comparable properties to support your answer. "
+                "Focus specifically on answering the user's pricing question."
+            )
+
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                module_name="property_context"
+            )
+            return response
+
+        except Exception as e:
+            print(f"Error handling pricing inquiry: {str(e)}")
+            return "I apologize, but I encountered an error processing your pricing inquiry. Please try again."
+
+    async def handle_booking(self, message: str, context: Optional[Dict] = None) -> str:
+        """Handle booking and viewing requests."""
+        try:
+            if not context or 'property_id' not in context:
+                return "I need a specific property to arrange a viewing. Could you please provide a property ID?"
+
+            property_data = await self.get_or_fetch_property(context['property_id'])
+            if not property_data:
+                return "I'm sorry, but I couldn't find that property in our database."
+
+            # Get area insights for context about the location
+            area_insights = await self._get_area_insights(property_data.details.get('location', {}))
+
+            prompt = (
+                f"Property Details:\n{property_data}\n\n"
+                f"Area Information:\n{area_insights}\n\n"
+                f"User Request: {message}\n\n"
+                "Please provide information about viewing options, emphasizing our digital services first "
+                "(virtual tours, 3D walkthroughs, live video viewings). If the user specifically requires "
+                "an in-person viewing, provide details about our streamlined digital booking process. "
+                "Focus on how our platform makes the entire viewing process efficient and convenient."
+            )
+
+            response = await self.llm_client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                module_name="property_context"
+            )
+            return response
+
+        except Exception as e:
+            print(f"Error handling booking request: {str(e)}")
+            return "I apologize, but I encountered an error processing your booking request. Please try again."
 
     async def _get_area_insights(self, location: Dict) -> Dict:
         """Get comprehensive area insights using AdvisoryModule's functionality."""
@@ -229,126 +258,6 @@ class PropertyContextModule:
                 unique_features.append(feature)
         
         return unique_features
-
-    async def handle_booking(self, message: str, context: Optional[Dict] = None) -> str:
-        """Handle property viewing and booking requests."""
-        try:
-            if not context or "property_id" not in context:
-                return "I need a property ID to handle viewing requests. Please try again with a property selected."
-
-            property = await self.get_or_fetch_property(context["property_id"])
-            if not property:
-                return "I couldn't find information about this property. Please try again later."
-
-            response = await self.llm_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a helpful booking assistant. Guide users through the "
-                            "property viewing process. Explain the next steps and what "
-                            "information is needed to schedule a viewing."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Property: {property.name} in {property.location}\n\nUser request: {message}"
-                    }
-                ],
-                temperature=0.7
-            )
-
-            return response
-
-        except Exception as e:
-            print(f"Error in booking handler: {str(e)}")
-            return "I apologize, but I'm having trouble with the booking request. Please try again later."
-
-    async def handle_pricing(self, message: str, context: Optional[Dict] = None) -> str:
-        """
-        Handle property pricing inquiries with advanced market analysis and negotiation advice.
-        Provides insights on:
-        - Current asking price and its position in the market
-        - Historical price trends for similar properties
-        - Negotiation strategy based on market conditions
-        - Potential starting offer recommendations
-        """
-        try:
-            if not context or "property_id" not in context:
-                return "I need a property ID to provide pricing information. Please try again with a property selected."
-
-            property = await self.get_or_fetch_property(context["property_id"])
-            if not property:
-                return "I couldn't find information about this property. Please try again later."
-
-            # Extract core property information
-            price = property.details.get("price", "Price on request")
-            location = property.details.get("location", {})
-            property_type = property.details.get("specs", {}).get("property_type", "Unknown")
-            square_footage = property.details.get("specs", {}).get("square_footage", 0)
-            bedrooms = property.details.get("bedrooms", 0)
-            bathrooms = property.details.get("bathrooms", 0)
-
-            # Get market context for similar properties
-            similar_properties = await self._fetch_similar_properties(
-                location=location.get("city", ""),
-                property_type=property_type,
-                bedrooms=bedrooms,
-                price_range=[float(price) * 0.8, float(price) * 1.2] if isinstance(price, (int, float)) else None
-            )
-
-            # Prepare market analysis
-            market_analysis = {
-                "property_details": {
-                    "asking_price": price,
-                    "price_per_sqft": float(price) / square_footage if isinstance(price, (int, float)) and square_footage else None,
-                    "location": location,
-                    "property_type": property_type,
-                    "square_footage": square_footage,
-                    "bedrooms": bedrooms,
-                    "bathrooms": bathrooms
-                },
-                "market_context": {
-                    "similar_properties": similar_properties,
-                    "avg_price_per_sqft": self._calculate_avg_price_per_sqft(similar_properties),
-                    "price_range": self._get_price_range(similar_properties),
-                    "time_on_market": property.details.get("days_on_market", "Unknown"),
-                    "market_conditions": self._analyze_market_conditions(similar_properties)
-                }
-            }
-
-            response = await self.llm_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert real estate pricing analyst and negotiation advisor. "
-                            "Analyze the property details and market data to provide:\n"
-                            "1. Analysis of the current asking price relative to similar properties\n"
-                            "2. Insights on price per square foot compared to market averages\n"
-                            "3. Strategic negotiation advice based on market conditions\n"
-                            "4. Recommended starting offer range with justification\n"
-                            "5. Key factors that could influence negotiation\n\n"
-                            "Be data-driven in your analysis but explain insights in a clear, actionable way."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Property Analysis Request:\n"
-                            f"Market Data: {market_analysis}\n\n"
-                            f"User Question: {message}"
-                        )
-                    }
-                ],
-                temperature=0.7
-            )
-
-            return response
-
-        except Exception as e:
-            print(f"Error in pricing handler: {str(e)}")
-            return "I apologize, but I'm having trouble retrieving pricing information. Please try again later."
 
     async def _fetch_similar_properties(
         self,

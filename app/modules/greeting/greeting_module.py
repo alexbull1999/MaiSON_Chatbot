@@ -31,7 +31,8 @@ class GreetingModule:
                 
                 response = await self.llm_client.generate_response(
                     messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7
+                    temperature=0.7,
+                    module_name="greeting"
                 )
                 
                 if response:

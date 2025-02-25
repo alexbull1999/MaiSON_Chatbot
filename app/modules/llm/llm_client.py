@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import anthropic
 import google.generativeai as genai
 from openai import OpenAI
@@ -81,62 +81,87 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 500
+        max_tokens: int = 500,
+        module_name: Optional[str] = None,
     ) -> str:
-        """Generate a response using available LLM providers with retry logic and fallback."""
-        # Try primary provider first
-        if self.provider in self.clients:
-            try:
-                response = await self._generate_with_provider(
-                    self.provider,
-                    messages,
-                    temperature,
-                    max_tokens
-                )
-                if response:
-                    return response
-            except Exception as e:
-                print(f"Error with primary provider {self.provider}: {str(e)}")
+        """
+        Generate a response using the configured LLM provider.
+        Now includes system prompt in all requests.
+        """
+        try:
+            # Get appropriate system prompt based on module
+            system_prompt = (
+                SystemPrompts.get_module_prompt(module_name, self.provider)
+                if module_name
+                else SystemPrompts.get_prompt(self.provider)
+            )
 
-        # Try fallback providers
-        for provider in self.fallback_providers:
-            if provider in self.clients:
+            # Try primary provider first
+            if self.provider in self.clients:
                 try:
-                    print(f"Trying fallback provider: {provider}")
                     response = await self._generate_with_provider(
-                        provider,
+                        self.provider,
                         messages,
                         temperature,
-                        max_tokens
+                        max_tokens,
+                        system_prompt
                     )
                     if response:
                         return response
                 except Exception as e:
-                    print(f"Error with fallback provider {provider}: {str(e)}")
-                    continue
+                    print(f"Error with primary provider {self.provider}: {str(e)}")
 
-        # If all providers fail, use mock response
-        return self._get_mock_response(messages)
+            # Try fallback providers
+            for provider in self.fallback_providers:
+                if provider in self.clients:
+                    try:
+                        print(f"Trying fallback provider: {provider}")
+                        # Update system prompt for fallback provider
+                        fallback_system_prompt = (
+                            SystemPrompts.get_module_prompt(module_name, provider)
+                            if module_name
+                            else SystemPrompts.get_prompt(provider)
+                        )
+                        response = await self._generate_with_provider(
+                            provider,
+                            messages,
+                            temperature,
+                            max_tokens,
+                            fallback_system_prompt
+                        )
+                        if response:
+                            return response
+                    except Exception as e:
+                        print(f"Error with fallback provider {provider}: {str(e)}")
+                        continue
+
+            # If all providers fail, use mock response
+            return self._get_mock_response(messages)
+
+        except Exception as e:
+            print(f"Error generating response: {str(e)}")
+            return "I apologize, but I encountered an error generating a response. Please try again."
 
     async def _generate_with_provider(
         self,
         provider: LLMProvider,
         messages: List[Dict[str, str]],
         temperature: float,
-        max_tokens: int
+        max_tokens: int,
+        system_prompt: str
     ) -> str:
         """Generate response using a specific provider."""
         if provider == LLMProvider.OPENAI:
             return await self._generate_openai_response(
-                messages, temperature, max_tokens
+                messages, temperature, max_tokens, system_prompt
             )
         elif provider == LLMProvider.ANTHROPIC:
             return await self._generate_anthropic_response(
-                messages, temperature, max_tokens
+                messages, temperature, max_tokens, system_prompt
             )
         elif provider == LLMProvider.GEMINI:
             return await self._generate_gemini_response(
-                messages, temperature, max_tokens
+                messages, temperature, max_tokens, system_prompt
             )
         
         raise ValueError(f"Unsupported provider: {provider}")
@@ -145,14 +170,15 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float,
-        max_tokens: int
+        max_tokens: int,
+        system_prompt: str
     ) -> str:
         """Generate response using OpenAI's API."""
         # Add system prompt if not present
         if not any(msg.get("role") == "system" for msg in messages):
             messages.insert(0, {
                 "role": "system",
-                "content": self.get_system_prompt()
+                "content": system_prompt
             })
 
         response = await self.clients[LLMProvider.OPENAI].chat.completions.create(
@@ -167,11 +193,11 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float,
-        max_tokens: int
+        max_tokens: int,
+        system_prompt: str
     ) -> str:
         """Generate response using Anthropic's Claude API."""
         # Convert messages to Claude format
-        system_prompt = self.get_system_prompt()
         formatted_messages = []
         
         for msg in messages:
@@ -193,7 +219,8 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float,
-        max_tokens: int
+        max_tokens: int,
+        system_prompt: str
     ) -> str:
         """Generate response using Google's Gemini API."""
         try:
@@ -201,7 +228,6 @@ class LLMClient:
             formatted_content = []
             
             # Add system prompt
-            system_prompt = self.get_system_prompt()
             formatted_content.append(system_prompt)
             
             # Add conversation history

@@ -188,6 +188,11 @@ async def test_handle_inquiry(
     assert "semi-detached" in response
     assert "London" in response
     assert "3 bedrooms" in response
+    
+    # Verify LLM client call
+    property_module.llm_client.generate_response.assert_called_once()
+    call_args = property_module.llm_client.generate_response.call_args[1]
+    assert call_args.get('module_name') == 'property_context'
 
 
 @pytest.mark.asyncio
@@ -211,6 +216,11 @@ async def test_handle_pricing(
     # Verify response
     assert "£450,000" in response
     assert "competitive" in response
+    
+    # Verify LLM client call
+    property_module.llm_client.generate_response.assert_called_once()
+    call_args = property_module.llm_client.generate_response.call_args[1]
+    assert call_args.get('module_name') == 'property_context'
 
 
 @pytest.mark.asyncio
@@ -231,6 +241,11 @@ async def test_handle_booking(property_module, mock_property_data):
     # Verify response
     assert "schedule a viewing" in response
     assert "Sample Street" in response
+    
+    # Verify LLM client call
+    property_module.llm_client.generate_response.assert_called_once()
+    call_args = property_module.llm_client.generate_response.call_args[1]
+    assert call_args.get('module_name') == 'property_context'
 
 
 def test_summarize_similar_properties(property_module, mock_similar_properties):
