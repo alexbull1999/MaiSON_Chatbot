@@ -63,7 +63,7 @@ app.add_middleware(
         "http://127.0.0.1:5137",  # Alternative local development URL
         "http://localhost:8137",  # Additional local development port
         "http://127.0.0.1:8137",  # Additional local development URL
-        "https://www.maisonai.co.uk"
+        "https://www.maisonai.co.uk",
         "https://172.205.8.94",
         "https://maison-apim.azure-api.net/api/chat/general",
         "https://maison-apim.azure-api.net/api/chat/property",
