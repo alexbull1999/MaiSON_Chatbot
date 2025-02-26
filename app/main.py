@@ -65,7 +65,7 @@ app.add_middleware(
         "http://127.0.0.1:8137",  # Additional local development URL
         "https://www.maisonai.co.uk"
         "https://172.205.8.94",
-        "https://maison-apim.azure-api.net"
+        "https://maison-apim.azure-api.net/api"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
