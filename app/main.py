@@ -64,6 +64,8 @@ app.add_middleware(
         "http://localhost:8137",  # Additional local development port
         "http://127.0.0.1:8137",  # Additional local development URL
         "https://www.maisonai.co.uk"
+        "https://172.205.8.94",
+        "https://maison-apim.azure-api.net"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
