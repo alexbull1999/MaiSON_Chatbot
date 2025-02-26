@@ -6,6 +6,7 @@ from .communication import CommunicationModule
 from .communication.seller_buyer_communication import SellerBuyerCommunicationModule
 from .context_manager import ContextManager
 from .greeting.greeting_module import GreetingModule
+from .website_info import WebsiteInfoModule
 
 
 class MessageRouter:
@@ -17,6 +18,7 @@ class MessageRouter:
         self.seller_buyer_communication = SellerBuyerCommunicationModule()
         self.context_manager = ContextManager()
         self.greeting_module = GreetingModule()
+        self.website_info_module = WebsiteInfoModule()
 
     async def process_message(
         self, message: str, context: Optional[Dict] = None
@@ -51,8 +53,13 @@ class MessageRouter:
             Intent.BUYER_SELLER_COMMUNICATION: self.seller_buyer_communication.handle_message,
             Intent.NEGOTIATION: self.seller_buyer_communication.handle_message,
             Intent.GENERAL_QUESTION: self.advisory_module.handle_general_inquiry,
+            Intent.WEBSITE_FUNCTIONALITY: self.website_info_module.handle_website_functionality,
+            Intent.COMPANY_INFORMATION: self.website_info_module.handle_company_information,
             Intent.UNKNOWN: self.communication_module.handle_unclear_intent,
         }
+
+        # Update context with the intent for use in handlers
+        context["intent"] = intent.value
 
         handler = intent_handlers.get(
             intent, self.communication_module.handle_unclear_intent
@@ -72,7 +79,25 @@ class MessageRouter:
                 if intent == Intent.GREETING:
                     response = await self.greeting_module.handle_greeting(message, context)
                 else:
-                    response = await self.advisory_module.handle_general_inquiry(message, context or {})
+                    # For general chat, we still want to classify the intent more specifically
+                    # to catch website and company information queries
+                    specific_intent = await self.intent_classifier.classify(message)
+                    
+                    if specific_intent in [Intent.WEBSITE_FUNCTIONALITY, Intent.COMPANY_INFORMATION]:
+                        # Update context with the intent
+                        context_with_intent = context.copy() if context else {}
+                        context_with_intent["intent"] = specific_intent.value
+                        
+                        # Route to website info module
+                        response = await self._route_intent(specific_intent, message, context_with_intent)
+                        return {
+                            "response": response,
+                            "intent": specific_intent.value,
+                            "context": context_with_intent,
+                        }
+                    else:
+                        # Default to advisory module for other general questions
+                        response = await self.advisory_module.handle_general_inquiry(message, context or {})
                 
                 return {
                     "response": response,

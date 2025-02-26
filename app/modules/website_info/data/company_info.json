@@ -1,0 +1,90 @@
+{
+  "company": {
+    "name": "MaiSON-AI",
+    "founded": "2025",
+    "headquarters": "London, United Kingdom",
+    "mission": "To revolutionize the property market by removing unnecessary intermediaries, reducing costs, and creating a more transparent and efficient buying and selling experience through AI technology.",
+    "vision": "A world where buying and selling property is as simple, transparent, and cost-effective as possible, with technology empowering individuals throughout the entire process."
+  },
+  "about_us": {
+    "summary": "MaiSON-AI was founded with a simple idea: the traditional estate agent model is outdated, expensive, and often doesn't serve buyers or sellers effectively. By leveraging cutting-edge AI technology, we've created a platform that handles all the functions of traditional estate agents at a fraction of the cost, while providing a superior experience for all parties involved.",
+    "story": "Our founder experienced the frustrations of the traditional property market firsthand when trying to sell their home. After paying thousands in commission for what felt like minimal service, they realized there had to be a better way. MaiSON-AI was born from this realization, with the goal of using technology to make property transactions simpler, more transparent, and more affordable.",
+    "values": [
+      "Transparency in all aspects of the property transaction",
+      "Innovation through cutting-edge AI technology",
+      "Accessibility for all, regardless of property experience",
+      "Cost-effectiveness, passing savings to our customers",
+      "Customer-centricity in every feature we develop"
+    ]
+  },
+  "team": {
+    "leadership": [
+      {
+        "name": "Alex Smith",
+        "position": "Founder & CEO",
+        "background": "Former PropTech executive with 15 years of experience in real estate and technology"
+      },
+      {
+        "name": "Sarah Johnson",
+        "position": "CTO",
+        "background": "AI specialist with previous experience at leading tech companies"
+      },
+      {
+        "name": "Michael Wong",
+        "position": "COO",
+        "background": "Former operations director at a major UK estate agency chain"
+      },
+      {
+        "name": "Emma Davies",
+        "position": "Head of Customer Experience",
+        "background": "Customer experience expert with background in luxury property services"
+      }
+    ],
+    "size": "25+ employees and growing",
+    "culture": "We're a diverse, innovative team passionate about transforming the property market. We value work-life balance, continuous learning, and making a real difference in our customers' lives."
+  },
+  "achievements": {
+    "milestones": [
+      "Launched platform in 2025",
+      "Facilitated over 100 successful property transactions in first year",
+      "Saved sellers an average of £8,000 in commission fees",
+      "Expanded to cover all major UK cities",
+      "Achieved 95% customer satisfaction rating"
+    ]
+  },
+  "social_responsibility": {
+    "initiatives": [
+      "Affordable Housing Partnership: Working with developers to create more affordable housing options",
+      "Digital Inclusion Program: Ensuring our platform is accessible to all, including those with limited digital literacy",
+      "Environmental Commitment: Carbon-neutral operations and promoting energy-efficient homes"
+    ]
+  },
+  "contact": {
+    "tagline": "Have questions about MaiSON? We're here to help.",
+    "email": {
+      "label": "Email",
+      "address": "contact@maison.ai"
+    },
+    "phone": {
+      "label": "Phone",
+      "number": "+44 (0) 20 1234 5678"
+    },
+    "office": {
+      "label": "Office",
+      "location": "London, United Kingdom"
+    },
+    "contact_page": {
+      "url": "https://www.maisonai.co.uk/contact",
+      "description": "Visit our contact page to send us a message or find more ways to get in touch."
+    },
+    "contact_form": {
+      "fields": ["Name", "Email", "Subject", "Message"],
+      "description": "Fill out our contact form on the website and we'll get back to you as soon as possible."
+    },
+    "social_media": {
+      "twitter": "@MaiSONAI",
+      "linkedin": "linkedin.com/company/maison-ai",
+      "instagram": "@maison_ai"
+    }
+  }
+} 

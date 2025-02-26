@@ -12,6 +12,7 @@ def test_message_router_initialization():
     assert router.property_context is not None
     assert router.advisory_module is not None
     assert router.communication_module is not None
+    assert router.website_info_module is not None
 
 
 @pytest.fixture
@@ -23,6 +24,8 @@ def message_router():
     router.communication_module = AsyncMock()
     router.seller_buyer_communication = AsyncMock()
     router.context_manager = AsyncMock()
+    router.greeting_module = AsyncMock()
+    router.website_info_module = AsyncMock()
     return router
 
 
@@ -214,3 +217,29 @@ async def test_error_handling(message_router):
     response = await message_router.process_message("Test message")
     assert "apologize" in response.lower()
     assert "error" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_route_website_functionality(message_router):
+    """Test routing of website functionality messages."""
+    message_router.intent_classifier.classify.return_value = Intent.WEBSITE_FUNCTIONALITY
+    message_router.website_info_module.handle_website_functionality.return_value = (
+        "Website functionality response"
+    )
+
+    response = await message_router.process_message("How do I search for properties on your website?")
+    assert response == "Website functionality response"
+    message_router.website_info_module.handle_website_functionality.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_route_company_information(message_router):
+    """Test routing of company information messages."""
+    message_router.intent_classifier.classify.return_value = Intent.COMPANY_INFORMATION
+    message_router.website_info_module.handle_company_information.return_value = (
+        "Company information response"
+    )
+
+    response = await message_router.process_message("Tell me about MaiSON's history.")
+    assert response == "Company information response"
+    message_router.website_info_module.handle_company_information.assert_called_once()

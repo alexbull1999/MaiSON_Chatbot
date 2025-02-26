@@ -95,3 +95,61 @@ async def test_classify_error_handling(intent_classifier, mock_llm_client):
     message = "What are the features of this house?"
     result = await intent_classifier.classify(message)
     assert result == Intent.UNKNOWN
+
+
+@pytest.mark.asyncio
+async def test_classify_website_functionality(intent_classifier, mock_llm_client):
+    """Test classification of website functionality messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "website_functionality"
+    message = "How do I create a listing on your website?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.WEBSITE_FUNCTIONALITY
+
+
+@pytest.mark.asyncio
+async def test_classify_company_information(intent_classifier, mock_llm_client):
+    """Test classification of company information messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "company_information"
+    message = "When was MaiSON founded?"
+    result = await intent_classifier.classify(message)
+    assert result == Intent.COMPANY_INFORMATION
+
+
+@pytest.mark.asyncio
+async def test_classify_website_functionality_examples(intent_classifier, mock_llm_client):
+    """Test classification of various website functionality messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "website_functionality"
+    
+    messages = [
+        "How do I search for properties on your website?",
+        "What steps are involved in the buying process on your platform?",
+        "How can I contact a seller through the website?",
+        "Can you explain how the offer submission works?",
+        "How do I save a property to my favorites?"
+    ]
+    
+    for message in messages:
+        result = await intent_classifier.classify(message)
+        assert result == Intent.WEBSITE_FUNCTIONALITY
+
+
+@pytest.mark.asyncio
+async def test_classify_company_information_examples(intent_classifier, mock_llm_client):
+    """Test classification of various company information messages."""
+    intent_classifier.llm_client = mock_llm_client
+    mock_llm_client.generate_response.return_value = "company_information"
+    
+    messages = [
+        "Who is on your leadership team?",
+        "What is MaiSON's mission?",
+        "Tell me about your company's history",
+        "When was MaiSON founded?",
+        "What are your company values?"
+    ]
+    
+    for message in messages:
+        result = await intent_classifier.classify(message)
+        assert result == Intent.COMPANY_INFORMATION

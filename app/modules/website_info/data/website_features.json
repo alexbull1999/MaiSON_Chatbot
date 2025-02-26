@@ -1,0 +1,201 @@
+{
+  "property_search": {
+    "name": "Property Search",
+    "description": "Advanced search functionality to find properties based on location, price, features, and more.",
+    "how_to_use": "Enter your search criteria in the search bar at the top of the homepage. You can filter by location, price range, number of bedrooms, property type, and more.",
+    "features": [
+      "Location-based search with map view",
+      "Price range filters",
+      "Property type filters (house, apartment, etc.)",
+      "Bedroom and bathroom filters",
+      "Saved searches with email notifications"
+    ]
+  },
+  "ai_powered_matching": {
+    "name": "AI-Powered Property Matching",
+    "description": "Our intelligent algorithms match properties with the right buyers, optimizing your selling potential.",
+    "how_to_use": "When you list your property, our AI automatically matches it with potential buyers based on their preferences and search history.",
+    "features": [
+      "Smart matching algorithms",
+      "Buyer preference analysis",
+      "Optimized property visibility",
+      "Higher quality leads",
+      "Faster selling process"
+    ]
+  },
+  "virtual_viewings": {
+    "name": "Virtual Viewings",
+    "description": "View properties remotely through 3D tours, video walkthroughs, and live video calls.",
+    "how_to_use": "On a property listing page, click the 'Virtual Viewing' button to access 3D tours or schedule a live video viewing with our AI assistant.",
+    "features": [
+      "3D property tours available 24/7",
+      "Guided virtual viewings with AI assistant",
+      "Live video viewings with sellers",
+      "Virtual reality compatibility"
+    ]
+  },
+  "offer_submission": {
+    "name": "Offer Submission",
+    "description": "Submit and negotiate offers directly through the platform without an estate agent.",
+    "how_to_use": "On a property listing page, click 'Make an Offer' to submit your offer. You can include conditions and proof of funds.",
+    "features": [
+      "Secure offer submission",
+      "Counter-offer negotiation",
+      "Document upload for proof of funds",
+      "Offer tracking and status updates"
+    ]
+  },
+  "property_listing": {
+    "name": "Property Listing",
+    "description": "List your property for sale with professional photos, detailed descriptions, and virtual tours.",
+    "how_to_use": "Click 'Sell Your Home' on the homepage, then follow the step-by-step guide to create your listing.",
+    "features": [
+      "Professional photography service",
+      "3D tour creation",
+      "Detailed property description assistance",
+      "Automatic price suggestion based on market data",
+      "Listing performance analytics"
+    ]
+  },
+  "transaction_management": {
+    "name": "Transaction Management",
+    "description": "Manage the entire sale process from offer acceptance to completion.",
+    "how_to_use": "Once an offer is accepted, access the 'Transaction Hub' from your dashboard to track progress and complete required steps.",
+    "features": [
+      "Step-by-step transaction guide",
+      "Document upload and storage",
+      "Solicitor and mortgage broker integration",
+      "Task reminders and notifications",
+      "Secure messaging with all parties"
+    ]
+  },
+  "ai_assistant": {
+    "name": "24/7 AI Assistant",
+    "description": "Get instant answers to questions from both buyers and sellers, streamlining the entire process.",
+    "how_to_use": "Click the chat icon in the bottom right corner of any page to start a conversation with the AI assistant.",
+    "features": [
+      "Property search assistance",
+      "Market information and advice",
+      "Process guidance for buyers and sellers",
+      "Communication facilitation between parties",
+      "Available 24/7 with instant responses"
+    ]
+  },
+  "smart_document_management": {
+    "name": "Smart Document Management",
+    "description": "Securely manage all property documents, from listings to offers, in one centralized place.",
+    "how_to_use": "Access your document library from your dashboard to upload, view, and share important property documents.",
+    "features": [
+      "Centralized document storage",
+      "Secure sharing capabilities",
+      "Document organization by property",
+      "Electronic signature integration",
+      "Document version history"
+    ]
+  },
+  "real_time_analytics": {
+    "name": "Real-Time Analytics",
+    "description": "Track property views, interested buyers, and market trends to optimize your listing strategy.",
+    "how_to_use": "View your property analytics dashboard to see performance metrics and insights about your listing.",
+    "features": [
+      "Visitor tracking and demographics",
+      "Viewing request analytics",
+      "Market trend comparison",
+      "Performance optimization suggestions",
+      "Exportable reports"
+    ]
+  },
+  "automated_viewing_management": {
+    "name": "Automated Viewing Management",
+    "description": "Efficiently manage viewing requests and track potential buyer interest with our automated system.",
+    "how_to_use": "Set your availability in the calendar, and the system will automatically schedule viewings based on buyer requests.",
+    "features": [
+      "Automated scheduling",
+      "Buyer interest tracking",
+      "Viewing feedback collection",
+      "Calendar integration",
+      "Reminder notifications"
+    ]
+  },
+  "offer_management": {
+    "name": "Offer Management",
+    "description": "Compare and analyze multiple offers with AI-powered insights to make informed decisions.",
+    "how_to_use": "View all offers in your dashboard to compare terms, conditions, and buyer qualifications side by side.",
+    "features": [
+      "Side-by-side offer comparison",
+      "Buyer qualification assessment",
+      "AI-powered offer analysis",
+      "Negotiation tracking",
+      "Offer status management"
+    ]
+  },
+  "price_intelligence": {
+    "name": "Price Intelligence",
+    "description": "Get AI-driven price recommendations based on market data and property features.",
+    "how_to_use": "When listing your property, our system will suggest an optimal price range based on comparable properties and current market conditions.",
+    "features": [
+      "Data-driven price suggestions",
+      "Comparable property analysis",
+      "Market trend incorporation",
+      "Feature-based valuation",
+      "Price adjustment recommendations"
+    ]
+  },
+  "secure_process": {
+    "name": "Secure Process",
+    "description": "End-to-end security for all property transactions, documents, and communications.",
+    "how_to_use": "All interactions on the platform are encrypted and secure, with verification steps for sensitive actions.",
+    "features": [
+      "End-to-end encryption",
+      "Secure document storage",
+      "Identity verification",
+      "Transaction audit trail",
+      "Data protection compliance"
+    ]
+  },
+  "property_performance": {
+    "name": "Property Performance",
+    "description": "Monitor listing performance, viewer demographics, and engagement metrics in real-time.",
+    "how_to_use": "Access the performance dashboard from your property listing to view detailed analytics about your property's market performance.",
+    "features": [
+      "Listing view statistics",
+      "Viewer demographic analysis",
+      "Engagement tracking",
+      "Comparison with similar properties",
+      "Performance trend visualization"
+    ]
+  },
+  "customer_support": {
+    "name": "Customer Support",
+    "description": "Get help with any questions or issues you may have while using the MaiSON platform.",
+    "how_to_use": "Visit our Contact page at https://www.maisonai.co.uk/contact or use one of our direct contact methods.",
+    "contact_methods": {
+      "email": {
+        "label": "Email",
+        "address": "contact@maison.ai",
+        "description": "Send us an email for any inquiries or support needs."
+      },
+      "phone": {
+        "label": "Phone",
+        "number": "+44 (0) 20 1234 5678",
+        "description": "Call our support team during business hours."
+      },
+      "office": {
+        "label": "Office",
+        "location": "London, United Kingdom",
+        "description": "Our headquarters location."
+      }
+    },
+    "contact_form": {
+      "description": "Fill out our contact form on the website with your Name, Email, Subject, and Message, and we'll get back to you as soon as possible.",
+      "url": "https://www.maisonai.co.uk/contact"
+    },
+    "features": [
+      "Dedicated support team",
+      "Multiple contact channels",
+      "Quick response times",
+      "Comprehensive help center",
+      "Personalized assistance"
+    ]
+  }
+} 

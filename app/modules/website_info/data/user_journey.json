@@ -1,0 +1,202 @@
+{
+  "buyer_journey": {
+    "steps": [
+      {
+        "step": 1,
+        "name": "Create Account",
+        "description": "Sign up for a MaiSON account to access all buyer features.",
+        "actions": [
+          "Visit maisonai.co.uk and click 'Sign Up'",
+          "Complete your profile with personal details and preferences",
+          "Verify your email address",
+          "Set up notifications for new properties"
+        ]
+      },
+      {
+        "step": 2,
+        "name": "Property Search",
+        "description": "Find properties that match your criteria.",
+        "actions": [
+          "Use the search filters to narrow down properties",
+          "Save favorite properties to your dashboard",
+          "Set up alerts for new properties matching your criteria",
+          "Use the map view to explore neighborhoods"
+        ]
+      },
+      {
+        "step": 3,
+        "name": "Virtual Viewings",
+        "description": "View properties remotely before deciding to visit in person.",
+        "actions": [
+          "Browse 3D tours and video walkthroughs",
+          "Schedule live video viewings with the AI assistant",
+          "Ask questions about the property through the chat",
+          "Request additional information or photos"
+        ]
+      },
+      {
+        "step": 4,
+        "name": "In-Person Viewings",
+        "description": "Visit properties you're seriously interested in.",
+        "actions": [
+          "Schedule viewings through the platform",
+          "Receive confirmation and directions",
+          "Use the MaiSON app to access property details during viewing",
+          "Submit feedback after the viewing"
+        ]
+      },
+      {
+        "step": 5,
+        "name": "Make an Offer",
+        "description": "Submit an offer on your chosen property.",
+        "actions": [
+          "Click 'Make an Offer' on the property page",
+          "Enter your offer amount and any conditions",
+          "Upload proof of funds or mortgage in principle",
+          "Submit your offer securely through the platform"
+        ]
+      },
+      {
+        "step": 6,
+        "name": "Negotiation",
+        "description": "Negotiate with the seller through our AI assistant.",
+        "actions": [
+          "Receive counter-offers through the platform",
+          "Discuss terms with the AI assistant",
+          "Submit revised offers if needed",
+          "Receive offer acceptance notification"
+        ]
+      },
+      {
+        "step": 7,
+        "name": "Transaction Completion",
+        "description": "Complete the purchase process with guided assistance.",
+        "actions": [
+          "Access the Transaction Hub",
+          "Connect with recommended solicitors and surveyors",
+          "Upload required documents",
+          "Track progress to completion",
+          "Receive keys and complete purchase"
+        ]
+      }
+    ],
+    "benefits": [
+      "Save money with no buyer fees",
+      "24/7 support from AI assistant",
+      "Transparent process with no pressure tactics",
+      "Direct communication with sellers",
+      "Secure document handling and storage"
+    ],
+    "support": {
+      "description": "Need help at any stage of your buying journey? We're here to assist you.",
+      "contact_methods": {
+        "email": "contact@maison.ai",
+        "phone": "+44 (0) 20 1234 5678",
+        "contact_page": "https://www.maisonai.co.uk/contact"
+      },
+      "common_support_needs": [
+        "Help with property search filters",
+        "Assistance scheduling viewings",
+        "Guidance on making competitive offers",
+        "Support with document uploads",
+        "Questions about the buying process"
+      ],
+      "support_availability": "Our team is available during business hours, and our AI assistant is available 24/7 for immediate help."
+    }
+  },
+  "seller_journey": {
+    "steps": [
+      {
+        "step": 1,
+        "name": "Create Account",
+        "description": "Sign up for a MaiSON account to list your property.",
+        "actions": [
+          "Visit maisonai.co.uk and click 'Sign Up'",
+          "Complete your profile with personal details",
+          "Verify your email address",
+          "Select 'Sell Your Home'"
+        ]
+      },
+      {
+        "step": 2,
+        "name": "Property Listing",
+        "description": "Create a comprehensive listing for your property.",
+        "actions": [
+          "Enter property details, features, and specifications",
+          "Upload photos or schedule professional photography",
+          "Create 3D tour or schedule our team to create one",
+          "Set your asking price with AI-assisted valuation",
+          "Review and publish your listing"
+        ]
+      },
+      {
+        "step": 3,
+        "name": "Manage Viewings",
+        "description": "Handle viewing requests and showcase your property.",
+        "actions": [
+          "Receive and approve viewing requests",
+          "Schedule in-person viewings at convenient times",
+          "Conduct virtual viewings through the platform",
+          "Receive feedback from potential buyers"
+        ]
+      },
+      {
+        "step": 4,
+        "name": "Receive Offers",
+        "description": "Review and respond to offers from potential buyers.",
+        "actions": [
+          "Receive offer notifications",
+          "Review offer details and buyer information",
+          "Discuss offers with the AI assistant",
+          "Accept, reject, or counter offers"
+        ]
+      },
+      {
+        "step": 5,
+        "name": "Negotiation",
+        "description": "Negotiate with buyers through our AI assistant.",
+        "actions": [
+          "Communicate with buyers through the platform",
+          "Receive guidance on market conditions and fair pricing",
+          "Counter-offer or accept final offers",
+          "Confirm acceptance and move to transaction phase"
+        ]
+      },
+      {
+        "step": 6,
+        "name": "Transaction Completion",
+        "description": "Complete the sale process with guided assistance.",
+        "actions": [
+          "Access the Transaction Hub",
+          "Connect with your solicitor through the platform",
+          "Upload required documents",
+          "Track progress to completion",
+          "Complete sale and transfer ownership"
+        ]
+      }
+    ],
+    "benefits": [
+      "Save thousands in estate agent commissions (only 0.5% fee)",
+      "Control your listing and viewing schedule",
+      "Receive offers directly from serious buyers",
+      "24/7 support from AI assistant",
+      "Transparent process with no hidden fees"
+    ],
+    "support": {
+      "description": "Need help at any stage of your selling journey? Our team is ready to assist you.",
+      "contact_methods": {
+        "email": "contact@maison.ai",
+        "phone": "+44 (0) 20 1234 5678",
+        "contact_page": "https://www.maisonai.co.uk/contact"
+      },
+      "common_support_needs": [
+        "Assistance with property listing creation",
+        "Help with photography and 3D tour scheduling",
+        "Guidance on pricing your property competitively",
+        "Support with managing viewing requests",
+        "Questions about offer negotiation and acceptance"
+      ],
+      "support_availability": "Our dedicated seller support team is available during business hours, and our AI assistant can help with many questions 24/7."
+    }
+  }
+} 

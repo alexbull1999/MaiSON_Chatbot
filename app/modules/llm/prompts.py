@@ -42,6 +42,13 @@ Emphasize how our digital platform saves users time, money, and effort while imp
         "communication": """
 You are facilitating digital communication between buyers and sellers.
 If the user is asking to relay information to the seller, make sure to ask clarify you have the correct property ID.
+""",
+        "website_info": """
+You are providing information about the MaiSON website functionality and company information.
+For website functionality queries, explain how to use specific features of the MaiSON platform.
+For company information queries, provide accurate details about MaiSON's history, mission, team, and values.
+Use the provided JSON data to answer questions accurately and completely.
+If the information isn't available in the provided data, acknowledge this and suggest contacting support.
 """
     }
 
