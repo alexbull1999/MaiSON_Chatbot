@@ -14,30 +14,36 @@
       "Innovation through cutting-edge AI technology",
       "Accessibility for all, regardless of property experience",
       "Cost-effectiveness, passing savings to our customers",
-      "Customer-centricity in every feature we develop"
+      "Customer-centricity in every feature we develop",
+      "Making the process of buying and selling property as simple, transparent, and cost-effective as possible",
     ]
   },
   "team": {
     "leadership": [
       {
-        "name": "Alex Smith",
-        "position": "Founder & CEO",
-        "background": "Former PropTech executive with 15 years of experience in real estate and technology"
+        "name": "Alex Bull",
+        "position": "Co-Founder",
+        "background": "Former BCG consultant, Imperial Computer Science Alumni and Cantab"
       },
       {
-        "name": "Sarah Johnson",
-        "position": "CTO",
-        "background": "AI specialist with previous experience at leading tech companies"
+        "name": "Rob Lovegrove",
+        "position": "Co-Founder",
+        "background": "Former NHS doctor, Imperial Computer Science Alumni"
       },
       {
-        "name": "Michael Wong",
-        "position": "COO",
-        "background": "Former operations director at a major UK estate agency chain"
+        "name": "Nell Norman",
+        "position": "Co-Founder",
+        "background": "Serial Entrepreneuer, Imperial Computer Science Alumni, Oxon"
       },
       {
-        "name": "Emma Davies",
-        "position": "Head of Customer Experience",
-        "background": "Customer experience expert with background in luxury property services"
+        "name": "Will Holy-Hasted",
+        "position": "Co-Founder",
+        "background": "Former investment associate, Imperaial Computer Science Alumni and Cantab"
+      },
+      {
+        "name": "Olatunji Amosu",
+        "position": "Co-Founder",
+        "background": "CFA charterholder and former Investment Analyst at abrdn and Willis Towers Watson, Imperial Computer Science Alumni"
       }
     ],
     "size": "25+ employees and growing",

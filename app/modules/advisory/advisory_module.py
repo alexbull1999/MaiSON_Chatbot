@@ -150,11 +150,31 @@ class AdvisoryModule:
             if location:
                 area_insights = await self.get_area_insights(location)
             
-            # Prepare the prompt with area insights if available
-            prompt = f"User question: {message}\n"
+            # Check if area_insights contains useful data
+            has_useful_data = False
             if area_insights:
+                # Check if we have any non-None values in the nested dictionaries
+                if area_insights.get('market_overview') and any(v is not None for v in area_insights.get('market_overview', {}).values()):
+                    has_useful_data = True
+                elif area_insights.get('area_profile') and any(v is not None for v in area_insights.get('area_profile', {}).values()):
+                    has_useful_data = True
+            
+            # Prepare the prompt based on whether we have useful data
+            if has_useful_data:
+                # Use the area insights in the prompt
+                prompt = f"User question: {message}\n"
                 prompt += f"\nArea Information:\n{area_insights}\n"
-            prompt += "\nPlease provide a detailed response about the inquiry."
+                prompt += "\nPlease provide a detailed response about the inquiry."
+            else:
+                # Fall back to using the LLM's own knowledge
+                prompt = (
+                    f"User question: {message}\n\n"
+                    f"Please provide a detailed response about this real estate inquiry using your own knowledge. "
+                    f"If the question is about a specific location (like {location if location else 'a city or neighborhood'}), "
+                    f"provide general information about that location such as property market trends, "
+                    f"typical prices, neighborhood characteristics, transport links, and amenities. "
+                    f"Be specific and helpful, drawing on your general knowledge about real estate and locations."
+                )
             
             response = await self.llm_client.generate_response(
                 messages=[{"role": "user", "content": prompt}],
@@ -168,11 +188,27 @@ class AdvisoryModule:
             return "I apologize, but I encountered an error processing your inquiry. Please try again."
 
     async def _extract_location(self, message: str) -> Optional[str]:
-        """Extract location information from a message using LLM."""
+        """Extract location information from a message using LLM and pattern matching."""
         try:
+            # First try with simple pattern matching for common UK locations
+            common_uk_locations = [
+                "London", "Manchester", "Birmingham", "Liverpool", "Leeds", "Glasgow", "Edinburgh",
+                "Bristol", "Sheffield", "Newcastle", "Nottingham", "Cardiff", "Belfast", "Oxford",
+                "Cambridge", "York", "Brighton", "Southampton", "Portsmouth", "Leicester", "Coventry",
+                "Peckham", "Brixton", "Hackney", "Shoreditch", "Islington", "Camden", "Kensington",
+                "Chelsea", "Westminster", "Mayfair", "Soho", "Covent Garden", "Notting Hill"
+            ]
+            
+            # Check if any common location is in the message
+            for location in common_uk_locations:
+                if location.lower() in message.lower():
+                    return location
+            
+            # If no common location found, use LLM for more complex extraction
             prompt = (
                 "Extract the location or area mentioned in this message. "
-                "Return ONLY the location name, or 'None' if no location is mentioned.\n\n"
+                "Focus on identifying UK cities, towns, neighborhoods, or boroughs. "
+                "Return ONLY the location name without any additional text, or 'None' if no location is mentioned.\n\n"
                 f"Message: {message}"
             )
             
@@ -182,7 +218,15 @@ class AdvisoryModule:
                 module_name="advisory"
             )
             
-            return response.strip() if response.lower() != "none" else None
+            # Clean up the response
+            location = response.strip()
+            if location.lower() == "none" or not location:
+                return None
+                
+            # Remove any quotes or extra punctuation
+            location = location.strip('"\'.,;:()[]{}')
+            
+            return location
 
         except Exception as e:
             print(f"Error extracting location: {str(e)}")

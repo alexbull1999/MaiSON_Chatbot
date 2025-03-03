@@ -67,7 +67,6 @@ app.add_middleware(
         "https://172.205.8.94",
         "https://maison-apim.azure-api.net/api/chat/general",
         "https://maison-apim.azure-api.net/api/chat/property",
-        "https://maison-apim.azure-api.net/api/chat/mortgage",        
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
