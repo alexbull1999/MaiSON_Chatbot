@@ -36,6 +36,8 @@ ignore =
     E402
     #Math stuff
     E226
+    #Complexity when actually its just lots of simple if/elses
+    C901
    
     
 
