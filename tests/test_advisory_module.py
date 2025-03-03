@@ -92,8 +92,9 @@ async def test_handle_general_inquiry_with_location(
     advisory_module.data_service = mock_property_data_service
     advisory_module.llm_client = mock_llm_client
 
-    # Mock location extraction
-    advisory_module._extract_location = AsyncMock(return_value="London")
+    # Mock location extraction and area-within-city check
+    advisory_module._extract_locations = AsyncMock(return_value=["London"])
+    advisory_module._is_asking_for_areas_within_city = AsyncMock(return_value=None)
 
     response = await advisory_module.handle_general_inquiry(
         "What's it like to live in London?"
@@ -103,10 +104,14 @@ async def test_handle_general_inquiry_with_location(
     assert len(response) > 0
     mock_property_data_service.get_area_insights.assert_called_once()
     
-    # Verify LLM client was called twice (area analysis and final response)
+    # Verify LLM client was called the expected number of times
+    # 1. extract_locations
+    # 2. is_asking_for_areas_within_city
+    # 3. generate_area_analysis
+    # 4. final response
     assert mock_llm_client.generate_response.call_count == 2
     
-    # Verify both calls used the correct module_name
+    # Verify all calls used the correct module_name
     call_args_list = mock_llm_client.generate_response.call_args_list
     for call_args in call_args_list:
         assert call_args[1].get('module_name') == 'advisory'
@@ -119,8 +124,9 @@ async def test_handle_general_inquiry_without_location(
     """Test handling a general inquiry without a location."""
     advisory_module.llm_client = mock_llm_client
 
-    # Mock location extraction to return None
-    advisory_module._extract_location = AsyncMock(return_value=None)
+    # Mock location extraction to return empty list and area-within-city check to return None
+    advisory_module._extract_locations = AsyncMock(return_value=[])
+    advisory_module._is_asking_for_areas_within_city = AsyncMock(return_value=None)
 
     response = await advisory_module.handle_general_inquiry(
         "What makes a good investment property?"
@@ -128,10 +134,16 @@ async def test_handle_general_inquiry_without_location(
 
     assert isinstance(response, str)
     assert len(response) > 0
-    mock_llm_client.generate_response.assert_called_once()
+    
+    # Verify LLM client was called the expected number of times
+    # 1. extract_locations
+    # 2. final response
+    assert mock_llm_client.generate_response.call_count == 1
+    
     # Verify module_name parameter
-    call_args = mock_llm_client.generate_response.call_args[1]
-    assert call_args.get('module_name') == 'advisory'
+    call_args_list = mock_llm_client.generate_response.call_args_list
+    for call_args in call_args_list:
+        assert call_args[1].get('module_name') == 'advisory'
 
 
 @pytest.mark.asyncio
@@ -203,25 +215,59 @@ async def test_location_extraction(advisory_module):
     
     # Test with postcode
     advisory_module.llm_client.generate_response.return_value = "SW1A 1AA"
-    location = await advisory_module._extract_location(
+    locations = await advisory_module._extract_locations(
         "What's the property market like in SW1A 1AA?"
     )
-    assert location == "SW1A 1AA"
+    assert locations == ["SW1A 1AA"]
 
     # Test with city name
     advisory_module.llm_client.generate_response.return_value = "Manchester"
-    location = await advisory_module._extract_location(
+    locations = await advisory_module._extract_locations(
         "Tell me about properties in Manchester"
     )
-    assert location == "Manchester"
+    assert locations == ["Manchester"]
 
     # Test with area name
     advisory_module.llm_client.generate_response.return_value = "North London"
-    location = await advisory_module._extract_location(
+    locations = await advisory_module._extract_locations(
         "What's the market like in North London?"
     )
-    assert location == "North London"
+    assert locations == ["North London"]
 
+    # Verify module_name parameter was used
+    for call_args in advisory_module.llm_client.generate_response.call_args_list:
+        assert call_args[1].get('module_name') == 'advisory'
+
+
+@pytest.mark.asyncio
+async def test_is_asking_for_areas_within_city(advisory_module):
+    """Test detection of queries asking about areas within a city."""
+    # Mock LLM client
+    advisory_module.llm_client.generate_response = AsyncMock()
+    
+    # Test positive case
+    advisory_module.llm_client.generate_response.return_value = "Manchester"
+    result = await advisory_module._is_asking_for_areas_within_city(
+        "What are good areas to live in Manchester?",
+        ["Manchester"]
+    )
+    assert result == "Manchester"
+    
+    # Test negative case
+    advisory_module.llm_client.generate_response.return_value = "No"
+    result = await advisory_module._is_asking_for_areas_within_city(
+        "Is Manchester a good place to invest?",
+        ["Manchester"]
+    )
+    assert result is None
+    
+    # Test with no locations
+    result = await advisory_module._is_asking_for_areas_within_city(
+        "What makes a good investment property?",
+        []
+    )
+    assert result is None
+    
     # Verify module_name parameter was used
     for call_args in advisory_module.llm_client.generate_response.call_args_list:
         assert call_args[1].get('module_name') == 'advisory'
