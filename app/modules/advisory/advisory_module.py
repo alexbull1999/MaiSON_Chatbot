@@ -49,10 +49,40 @@ class AdvisoryModule:
                 insights = await self.data_service.get_area_insights(location, is_broad_area=True)
                 
                 # Add area-level analysis
-                analysis = await self._generate_area_analysis(location, insights.model_dump())
+                insights_dict = insights.model_dump() if insights else {}
+                
+                # Check if we have any meaningful data before generating analysis
+                has_data = False
+                
+                # Check market overview
+                market_overview = insights_dict.get('market_overview', {})
+                if market_overview and any(v is not None and v != 0 and v != "" for v in market_overview.values()):
+                    has_data = True
+                
+                # Check area profile
+                if not has_data:
+                    area_profile = insights_dict.get('area_profile', {})
+                    if area_profile:
+                        # Check direct values
+                        if any(v is not None and v != 0 and v != "" for v in area_profile.values() if not isinstance(v, dict)):
+                            has_data = True
+                        
+                        # Check nested dictionaries
+                        if not has_data:
+                            for key, value in area_profile.items():
+                                if isinstance(value, dict) and any(v is not None and v != 0 and v != "" for v in value.values()):
+                                    has_data = True
+                                    break
+                
+                # Generate analysis based on available data
+                analysis = await self._generate_area_analysis(location, insights_dict)
+                
+                # If we don't have meaningful data, mark the insights as empty
+                if not has_data:
+                    insights_dict = {}
             
             # Convert Pydantic model to dict and add analysis
-            insights_dict = insights.model_dump()
+            insights_dict = insights.model_dump() if insights else {}
             insights_dict['analysis'] = analysis
             insights_dict['last_updated'] = datetime.utcnow().isoformat()
             
@@ -105,27 +135,99 @@ class AdvisoryModule:
     async def _generate_area_analysis(self, location: str, insights: Dict) -> str:
         """Generate a natural language analysis of an area based on insights."""
         try:
+            # Clean up insights to remove None values and empty dictionaries
+            clean_insights = {}
+            
+            # Process market overview
+            market_data = insights.get('market_overview', {})
+            if market_data and any(v is not None and v != 0 and v != "" for v in market_data.values()):
+                clean_insights['market_overview'] = market_data
+            
+            # Process area profile
+            area_profile = insights.get('area_profile', {})
+            if area_profile:
+                clean_area_profile = {}
+                
+                # Process demographics
+                demographics = area_profile.get('demographics', {})
+                if demographics and any(v for v in demographics.values() if v):
+                    clean_area_profile['demographics'] = demographics
+                
+                # Process crime rate
+                crime_rate = area_profile.get('crime_rate')
+                if crime_rate is not None:
+                    clean_area_profile['crime_rate'] = crime_rate
+                
+                # Process amenities
+                amenities = area_profile.get('amenities_summary', {})
+                if amenities and any(v for v in amenities.values() if v):
+                    clean_area_profile['amenities'] = amenities
+                
+                # Process transport
+                transport = area_profile.get('transport_summary', {})
+                if transport and any(v for v in transport.values() if v):
+                    clean_area_profile['transport'] = transport
+                
+                # Process education
+                education = area_profile.get('education', {})
+                if education and any(v for v in education.values() if v):
+                    clean_area_profile['education'] = education
+                
+                if clean_area_profile:
+                    clean_insights['area_profile'] = clean_area_profile
+            
+            # Create a prompt that focuses on available data and encourages the LLM to use its knowledge
             prompt = (
                 f"Analyze this area ({location}) based on the following data.\n\n"
-                f"Market Overview:\n"
-                f"- Average Price: {insights.get('market_data', {}).get('average_price')}\n"
-                f"- Annual Change: {insights.get('market_data', {}).get('annual_change')}%\n"
-                f"- Five Year Change: {insights.get('market_data', {}).get('five_year_change')}%\n"
-                f"- Market Activity: {insights.get('market_data', {}).get('sales_volume')} sales\n\n"
-                f"Area Profile:\n"
-                f"- Demographics: {insights.get('demographics', {})}\n"
-                f"- Crime Rate: {insights.get('crime_rate')}\n"
-                f"- Amenities: {insights.get('amenities', {})}\n"
-                f"- Transport: {insights.get('transport', {})}\n"
-                f"- Education: {insights.get('education', {})}\n\n"
-                "Please provide a comprehensive analysis focusing on:\n"
+            )
+            
+            # Add market overview if available
+            if 'market_overview' in clean_insights:
+                market = clean_insights['market_overview']
+                prompt += "Market Overview:\n"
+                if market.get('average_price') is not None:
+                    prompt += f"- Average Price: {market.get('average_price')}\n"
+                if market.get('price_change_1y') is not None:
+                    prompt += f"- Annual Change: {market.get('price_change_1y')}%\n"
+                if market.get('number_of_sales') is not None:
+                    prompt += f"- Market Activity: {market.get('number_of_sales')} sales\n"
+                prompt += "\n"
+            
+            # Add area profile if available
+            if 'area_profile' in clean_insights:
+                area = clean_insights['area_profile']
+                prompt += "Area Profile:\n"
+                
+                if 'demographics' in area:
+                    prompt += f"- Demographics: {area['demographics']}\n"
+                
+                if 'crime_rate' in area:
+                    prompt += f"- Crime Rate: {area['crime_rate']}\n"
+                
+                if 'amenities' in area:
+                    prompt += f"- Amenities: {area['amenities']}\n"
+                
+                if 'transport' in area:
+                    prompt += f"- Transport: {area['transport']}\n"
+                
+                if 'education' in area:
+                    prompt += f"- Education: {area['education']}\n"
+                
+                prompt += "\n"
+            
+            # Add instructions for analysis
+            prompt += (
+                "Please provide a comprehensive analysis of this area. For any aspects where specific data is not provided above, "
+                "use your general knowledge about this location to fill in the gaps. DO NOT mention any lack of data in your response.\n\n"
+                "Focus your analysis on:\n"
                 "1. Overall area characteristics and lifestyle\n"
                 "2. Property market trends and investment potential\n"
                 "3. Transport and connectivity\n"
                 "4. Local amenities and facilities\n"
                 "5. Demographics and community\n"
                 "6. Education options\n"
-                "7. Safety and security"
+                "7. Safety and security\n\n"
+                "Be specific, informative, and confident in your analysis."
             )
 
             response = await self.llm_client.generate_response(
@@ -144,20 +246,49 @@ class AdvisoryModule:
         try:
             # Try to extract location from the message
             location = await self._extract_location(message)
+            print(f"Extracted location: {location}")
             
             # If we found a location, get area insights
             area_insights = {}
             if location:
                 area_insights = await self.get_area_insights(location)
+                print(f"Got area insights for {location}: {area_insights.keys() if area_insights else 'None'}")
             
             # Check if area_insights contains useful data
             has_useful_data = False
             if area_insights:
-                # Check if we have any non-None values in the nested dictionaries
-                if area_insights.get('market_overview') and any(v is not None for v in area_insights.get('market_overview', {}).values()):
-                    has_useful_data = True
-                elif area_insights.get('area_profile') and any(v is not None for v in area_insights.get('area_profile', {}).values()):
-                    has_useful_data = True
+                # More thorough check for useful data in nested structures
+                market_overview = area_insights.get('market_overview', {})
+                area_profile = area_insights.get('area_profile', {})
+                
+                print(f"Market overview: {market_overview}")
+                print(f"Area profile: {area_profile}")
+                
+                # Check market_overview for useful data
+                if market_overview and isinstance(market_overview, dict):
+                    market_has_data = any(v is not None and v != 0 and v != "" for v in market_overview.values())
+                    print(f"Market overview has useful data: {market_has_data}")
+                    if market_has_data:
+                        has_useful_data = True
+                
+                # Check area_profile for useful data
+                if not has_useful_data and area_profile and isinstance(area_profile, dict):
+                    # Check direct values in area_profile
+                    direct_has_data = any(v is not None and v != 0 and v != "" for v in area_profile.values() if not isinstance(v, dict))
+                    print(f"Area profile direct values have useful data: {direct_has_data}")
+                    if direct_has_data:
+                        has_useful_data = True
+                    
+                    # Check nested dictionaries in area_profile
+                    for key, value in area_profile.items():
+                        if isinstance(value, dict):
+                            nested_has_data = any(v is not None and v != 0 and v != "" for v in value.values())
+                            print(f"Area profile nested dict '{key}' has useful data: {nested_has_data}")
+                            if nested_has_data:
+                                has_useful_data = True
+                                break
+            
+            print(f"Final has_useful_data determination: {has_useful_data}")
             
             # Prepare the prompt based on whether we have useful data
             if has_useful_data:
@@ -165,16 +296,21 @@ class AdvisoryModule:
                 prompt = f"User question: {message}\n"
                 prompt += f"\nArea Information:\n{area_insights}\n"
                 prompt += "\nPlease provide a detailed response about the inquiry."
+                print("Using area insights in prompt")
             else:
-                # Fall back to using the LLM's own knowledge
+                # Fall back to using the LLM's own knowledge with explicit instructions
                 prompt = (
                     f"User question: {message}\n\n"
-                    f"Please provide a detailed response about this real estate inquiry using your own knowledge. "
+                    f"Please provide a detailed and helpful response about this real estate inquiry using ONLY your own knowledge. "
                     f"If the question is about a specific location (like {location if location else 'a city or neighborhood'}), "
-                    f"provide general information about that location such as property market trends, "
+                    f"provide specific information about that location such as property market trends, "
                     f"typical prices, neighborhood characteristics, transport links, and amenities. "
-                    f"Be specific and helpful, drawing on your general knowledge about real estate and locations."
+                    f"DO NOT mention any lack of data or information in your response. "
+                    f"DO NOT say phrases like 'I don't have specific data' or 'without specific data'. "
+                    f"Instead, confidently provide information based on your general knowledge about real estate and locations. "
+                    f"Be specific, helpful, and informative in your response."
                 )
+                print("Using fallback prompt with LLM knowledge")
             
             response = await self.llm_client.generate_response(
                 messages=[{"role": "user", "content": prompt}],
