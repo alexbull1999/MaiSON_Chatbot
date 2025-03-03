@@ -192,7 +192,7 @@ class AdvisoryModule:
         try:
             # First try with simple pattern matching for common UK locations
             common_uk_locations = [
-                "London", "Manchester", "Birmingham", "Liverpool", "Leeds", "Glasgow", "Edinburgh",
+                "North London", "South London", "East London", "West London", "London", "Manchester", "Birmingham", "Liverpool", "Leeds", "Glasgow", "Edinburgh",
                 "Bristol", "Sheffield", "Newcastle", "Nottingham", "Cardiff", "Belfast", "Oxford",
                 "Cambridge", "York", "Brighton", "Southampton", "Portsmouth", "Leicester", "Coventry",
                 "Peckham", "Brixton", "Hackney", "Shoreditch", "Islington", "Camden", "Kensington",

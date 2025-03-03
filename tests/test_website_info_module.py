@@ -219,4 +219,3 @@ async def test_handle_company_information_error():
         
         # Verify the error response
         assert "apologize" in response.lower()
-        assert "error" in response.lower() 

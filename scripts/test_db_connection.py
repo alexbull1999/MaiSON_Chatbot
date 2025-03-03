@@ -15,13 +15,14 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.database.db_connection import engine, Base, SessionLocal
 
+
 def test_connection():
     """Test database connection and basic operations."""
     try:
         # Try to connect and execute a simple query
         with engine.connect() as connection:
             logger.info("Successfully connected to database!")
-            
+
             try:
                 # Test simple query
                 result = connection.execute(text("SELECT version();"))
@@ -30,7 +31,7 @@ def test_connection():
             except SQLAlchemyError as e:
                 logger.error(f"Error executing version query: {str(e)}")
                 return False
-            
+
             # Test database session
             logger.info("Testing database session...")
             db = SessionLocal()
@@ -39,7 +40,7 @@ def test_connection():
                 result = db.execute(text("SELECT current_database();"))
                 db_name = result.scalar()
                 logger.info(f"Connected to database: {db_name}")
-                
+
                 # Test if we can create tables
                 logger.info("Testing table creation...")
                 try:
@@ -48,15 +49,15 @@ def test_connection():
                 except SQLAlchemyError as e:
                     logger.error(f"Error creating tables: {str(e)}")
                     return False
-                
+
             except SQLAlchemyError as e:
                 logger.error(f"Error in database session: {str(e)}")
                 return False
             finally:
                 db.close()
-                
+
             return True
-            
+
     except Exception as e:
         logger.error(f"Database connection error: {str(e)}")
         logger.error("Connection test failed!")

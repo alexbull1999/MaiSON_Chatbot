@@ -9,16 +9,19 @@ sys.path.append(str(project_root))
 
 from app.database import SessionLocal, engine, Base
 from app.database.models import (
-    GeneralConversation, GeneralMessage,
-    PropertyConversation, PropertyMessage,
-    ExternalReference
+    GeneralConversation,
+    GeneralMessage,
+    PropertyConversation,
+    PropertyMessage,
+    ExternalReference,
 )
+
 
 def seed_database():
     """Seed the database with sample data."""
     # Create all tables
     Base.metadata.create_all(bind=engine)
-    
+
     db = SessionLocal()
     try:
         # Create sample general conversation
@@ -28,8 +31,8 @@ def seed_database():
             context={
                 "last_intent": "general_inquiry",
                 "topics_discussed": ["general_inquiry", "service_info"],
-                "service_details_requested": True
-            }
+                "service_details_requested": True,
+            },
         )
         db.add(general_conv)
         db.flush()
@@ -42,7 +45,7 @@ def seed_database():
                 content="Hi, I'd like to know more about your services.",
                 intent="general_inquiry",
                 message_metadata={"confidence": 0.95},
-                timestamp=datetime.utcnow() - timedelta(minutes=30)
+                timestamp=datetime.utcnow() - timedelta(minutes=30),
             ),
             GeneralMessage(
                 conversation_id=general_conv.id,
@@ -53,10 +56,10 @@ def seed_database():
                 ),
                 intent="service_info",
                 message_metadata={"response_type": "service_details"},
-                timestamp=datetime.utcnow() - timedelta(minutes=29)
-            )
+                timestamp=datetime.utcnow() - timedelta(minutes=29),
+            ),
         ]
-        
+
         for message in general_messages:
             db.add(message)
 
@@ -72,8 +75,8 @@ def seed_database():
                 "last_intent": "negotiation",
                 "topics_discussed": ["property_inquiry", "negotiation"],
                 "property_details_requested": True,
-                "offer_made": True
-            }
+                "offer_made": True,
+            },
         )
         db.add(buyer_conv)
         db.flush()
@@ -88,8 +91,8 @@ def seed_database():
             property_context={
                 "last_intent": "buyer_seller_communication",
                 "topics_discussed": ["property_inquiry", "negotiation"],
-                "counter_offer_made": True
-            }
+                "counter_offer_made": True,
+            },
         )
         db.add(seller_conv)
         db.flush()
@@ -102,7 +105,7 @@ def seed_database():
                 content="Hi, I'm interested in making an offer on the property.",
                 intent="negotiation",
                 message_metadata={"confidence": 0.95},
-                timestamp=datetime.utcnow() - timedelta(minutes=30)
+                timestamp=datetime.utcnow() - timedelta(minutes=30),
             ),
             PropertyMessage(
                 conversation_id=buyer_conv.id,
@@ -113,7 +116,7 @@ def seed_database():
                 ),
                 intent="negotiation",
                 message_metadata={"response_type": "negotiation_facilitation"},
-                timestamp=datetime.utcnow() - timedelta(minutes=29)
+                timestamp=datetime.utcnow() - timedelta(minutes=29),
             ),
             PropertyMessage(
                 conversation_id=buyer_conv.id,
@@ -121,10 +124,10 @@ def seed_database():
                 content="I'd like to offer $450,000 with a 30-day closing period.",
                 intent="negotiation",
                 message_metadata={"confidence": 0.98},
-                timestamp=datetime.utcnow() - timedelta(minutes=28)
-            )
+                timestamp=datetime.utcnow() - timedelta(minutes=28),
+            ),
         ]
-        
+
         for message in buyer_messages:
             db.add(message)
 
@@ -136,7 +139,7 @@ def seed_database():
                 content="Thank you for your interest. I'm considering your offer.",
                 intent="buyer_seller_communication",
                 message_metadata={"confidence": 0.95},
-                timestamp=datetime.utcnow() - timedelta(minutes=27)
+                timestamp=datetime.utcnow() - timedelta(minutes=27),
             ),
             PropertyMessage(
                 conversation_id=seller_conv.id,
@@ -147,10 +150,10 @@ def seed_database():
                 ),
                 intent="negotiation",
                 message_metadata={"response_type": "negotiation_facilitation"},
-                timestamp=datetime.utcnow() - timedelta(minutes=26)
-            )
+                timestamp=datetime.utcnow() - timedelta(minutes=26),
+            ),
         ]
-        
+
         for message in seller_messages:
             db.add(message)
 
@@ -165,8 +168,8 @@ def seed_database():
                     "forwarded_at": datetime.utcnow().isoformat(),
                     "property_id": "test_property_1",
                     "sender_role": "buyer",
-                    "message_type": "negotiation"
-                }
+                    "message_type": "negotiation",
+                },
             ),
             ExternalReference(
                 general_conversation_id=general_conv.id,
@@ -174,17 +177,17 @@ def seed_database():
                 external_id="test_user_1",
                 reference_metadata={
                     "user_type": "prospect",
-                    "source": "website"
-                }
-            )
+                    "source": "website",
+                },
+            ),
         ]
-        
+
         for ref in external_refs:
             db.add(ref)
-        
+
         db.commit()
         print("Sample data has been seeded successfully!")
-        
+
     except Exception as e:
         print(f"Error seeding data: {e}")
         db.rollback()
@@ -193,4 +196,4 @@ def seed_database():
 
 
 if __name__ == "__main__":
-    seed_database() 
+    seed_database()
