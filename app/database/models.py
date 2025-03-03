@@ -64,7 +64,7 @@ class GeneralConversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(255), unique=True, index=True)
-    user_id = Column(String(255), nullable=True, index=True)  # Nullable for anonymous users
+    user_id = Column(String(255), nullable=True, index=True)  # UUID string for Firebase user ID
     is_logged_in = Column(Boolean, default=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     last_message_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -94,10 +94,10 @@ class PropertyConversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(255), unique=True, index=True)
-    user_id = Column(String(255), nullable=False, index=True)  # ID of the user sending messages
+    user_id = Column(String(255), nullable=False, index=True)  # UUID string for Firebase user ID
     property_id = Column(String(255), nullable=False, index=True)  # Property being discussed
     role = Column(String(50), nullable=False, index=True)  # 'buyer' or 'seller'
-    counterpart_id = Column(String(255), nullable=False, index=True)  # ID of the other party
+    counterpart_id = Column(String(255), nullable=False, index=True)  # UUID string for the other party
     conversation_status = Column(String(50), nullable=False, default="active")  # e.g., 'active', 'closed', 'pending'
     started_at = Column(DateTime, default=datetime.utcnow)
     last_message_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

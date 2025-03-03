@@ -29,7 +29,7 @@ class ConversationStatus(str, Enum):
 
 class GeneralChatRequest(BaseModel):
     message: str
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None  # UUID string for Firebase user ID
     session_id: Optional[str] = None
 
 
@@ -201,7 +201,7 @@ async def update_property_conversation_status(
 
 @router.get("/conversations/user/{user_id}")
 async def get_user_conversations(
-    user_id: str,
+    user_id: str,  # UUID string for Firebase user ID
     role: Optional[Role] = None,
     status: Optional[ConversationStatus] = None,
     db: Session = Depends(get_db),

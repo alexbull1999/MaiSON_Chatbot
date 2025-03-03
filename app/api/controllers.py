@@ -36,7 +36,7 @@ class ChatController:
         self,
         message: str,
         session_id: str,
-        user_id: Optional[str] = None,
+        user_id: Optional[str] = None,  # UUID string for Firebase user ID
         db: Session = Depends(get_db),
     ) -> GeneralChatResponse:
         """
@@ -45,7 +45,7 @@ class ChatController:
         Args:
             message: The user's message
             session_id: Session ID for conversation tracking
-            user_id: Optional authenticated user's ID
+            user_id: Optional authenticated user's ID (UUID string from Firebase)
             db: Database session
         """
         try:
@@ -135,10 +135,10 @@ class ChatController:
     async def handle_property_chat(
         self,
         message: str,
-        user_id: str,
+        user_id: str,  # UUID string for Firebase user ID
         property_id: str,
         role: Role,
-        counterpart_id: str,
+        counterpart_id: str,  # UUID string for the other party
         session_id: str,
         db: Session = Depends(get_db),
     ) -> PropertyChatResponse:
@@ -147,10 +147,10 @@ class ChatController:
 
         Args:
             message: The user's message
-            user_id: Authenticated user's ID
+            user_id: Authenticated user's ID (UUID string from Firebase)
             property_id: ID of the property being discussed
             role: Role of the user (buyer/seller)
-            counterpart_id: ID of the other party in the conversation
+            counterpart_id: ID of the other party in the conversation (UUID string from Firebase)
             session_id: Session ID for conversation tracking
             db: Database session
         """
@@ -246,7 +246,7 @@ class ChatController:
             raise HTTPException(status_code=500, detail=str(e))
 
     async def _get_or_create_general_conversation(
-        self, db: Session, session_id: str, user_id: Optional[str] = None
+        self, db: Session, session_id: str, user_id: Optional[str] = None  # UUID string for Firebase user ID
     ) -> GeneralConversation:
         """Get or create a general conversation."""
         conversation = (
@@ -274,10 +274,10 @@ class ChatController:
         self,
         db: Session,
         session_id: str,
-        user_id: str,
+        user_id: str,  # UUID string for Firebase user ID
         property_id: str,
         role: Role,
-        counterpart_id: str,
+        counterpart_id: str,  # UUID string for the other party
     ) -> PropertyConversation:
         """Get or create a property-specific conversation."""
         conversation = (

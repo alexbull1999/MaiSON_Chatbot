@@ -76,7 +76,7 @@ class GeneralMessage(GeneralMessageBase):
 
 class GeneralConversationBase(BaseModel):
     session_id: str
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None  # UUID string for Firebase user ID
     is_logged_in: bool = False
     context: Optional[Dict[str, Any]] = None
 
@@ -112,10 +112,10 @@ class PropertyMessage(PropertyMessageBase):
 
 class PropertyConversationBase(BaseModel):
     session_id: str
-    user_id: str
+    user_id: str  # UUID string for Firebase user ID
     property_id: str
     role: str  # 'buyer' or 'seller'
-    counterpart_id: str
+    counterpart_id: str  # UUID string for the other party
     conversation_status: str = "active"
     property_context: Optional[Dict[str, Any]] = None
 
