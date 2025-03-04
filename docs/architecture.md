@@ -86,11 +86,6 @@ The application uses SQLAlchemy ORM with the following main tables:
 - `property_conversations`: Manages buyer-seller communications
 - `property_messages`: Stores property-specific messages
 
-### Property Tables
-- `properties`: Core property information
-- `availability_slots`: Property viewing schedules
-- `inquiries`: User inquiries about properties
-
 ### Reference Tables
 - `external_references`: Links to external service data
 

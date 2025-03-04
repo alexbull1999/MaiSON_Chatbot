@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Text, JSON
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Text, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from sqlalchemy.types import TypeDecorator
@@ -16,47 +16,7 @@ class JSONString(TypeDecorator):
     def process_result_value(self, value, dialect):
         return str_to_json(value)
 
-class Property(Base):
-    __tablename__ = "properties"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), index=True)
-    type = Column(String(50))
-    location = Column(String(255), index=True)
-    price = Column(Float)
-    description = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    availability_slots = relationship("AvailabilitySlot", back_populates="property")
-    inquiries = relationship("Inquiry", back_populates="property")
-
-class AvailabilitySlot(Base):
-    __tablename__ = "availability_slots"
-
-    id = Column(Integer, primary_key=True, index=True)
-    property_id = Column(Integer, ForeignKey("properties.id"))
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    is_available = Column(Boolean, default=True)
-
-    # Relationships
-    property = relationship("Property", back_populates="availability_slots")
-
-class Inquiry(Base):
-    __tablename__ = "inquiries"
-
-    id = Column(Integer, primary_key=True, index=True)
-    property_id = Column(Integer, ForeignKey("properties.id"))
-    user_name = Column(String(255))
-    user_email = Column(String(255))
-    message = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String(50))  # e.g., "pending", "responded", "closed"
-
-    # Relationships
-    property = relationship("Property", back_populates="inquiries")
+# Removed Property, AvailabilitySlot, and Inquiry models as they are not used
 
 class GeneralConversation(Base):
     """Tracks general conversations between users and the chatbot."""
