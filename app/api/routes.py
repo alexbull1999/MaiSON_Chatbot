@@ -9,6 +9,7 @@ from app.database.schemas import (
 from app.database.models import (
     GeneralConversation as GeneralConversationModel,
     PropertyConversation as PropertyConversationModel,
+    ExternalReference,
 )
 from .controllers import chat_controller
 from pydantic import BaseModel
@@ -209,13 +210,20 @@ async def get_user_conversations(
     """
     Get all conversations for a specific user.
     Optionally filter by role (buyer/seller) and conversation status.
+    
+    This endpoint returns:
+    1. General conversations where the user is directly involved
+    2. Property conversations where the user is directly involved
+    3. Property conversations where the user is referenced as a counterpart
     """
+    # Get general conversations where user is directly involved
     general_conversations = (
         db.query(GeneralConversationModel)
         .filter(GeneralConversationModel.user_id == user_id)
         .all()
     )
 
+    # Get property conversations where user is directly involved
     property_query = db.query(PropertyConversationModel).filter(
         PropertyConversationModel.user_id == user_id
     )
@@ -228,6 +236,36 @@ async def get_user_conversations(
         )
 
     property_conversations = property_query.all()
+    
+    # Get property conversations where user is referenced as a counterpart
+    counterpart_query = (
+        db.query(PropertyConversationModel)
+        .join(
+            ExternalReference,
+            ExternalReference.property_conversation_id == PropertyConversationModel.id
+        )
+        .filter(ExternalReference.external_id == user_id)
+        .filter(ExternalReference.service_name == "seller_buyer_communication")
+    )
+    
+    # Apply the same filters as for direct conversations
+    if role:
+        # For counterpart conversations, we need to filter by the opposite role
+        opposite_role = "seller" if role.value == "buyer" else "buyer"
+        counterpart_query = counterpart_query.filter(PropertyConversationModel.role == opposite_role)
+    if status:
+        counterpart_query = counterpart_query.filter(
+            PropertyConversationModel.conversation_status == status
+        )
+    
+    counterpart_conversations = counterpart_query.all()
+    
+    # Combine direct and counterpart property conversations, avoiding duplicates
+    seen_ids = {conv.id for conv in property_conversations}
+    for conv in counterpart_conversations:
+        if conv.id not in seen_ids:
+            property_conversations.append(conv)
+            seen_ids.add(conv.id)
 
     return {
         "general_conversations": [
@@ -251,6 +289,7 @@ async def get_user_conversations(
                 "started_at": conv.started_at,
                 "last_message_at": conv.last_message_at,
                 "property_context": conv.property_context,
+                "is_counterpart": conv.user_id != user_id,  # Flag to indicate if user is the counterpart
             }
             for conv in property_conversations
         ],

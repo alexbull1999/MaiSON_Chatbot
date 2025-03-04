@@ -207,11 +207,45 @@ Response:
             "last_message_at": "2024-03-01T12:00:01Z",
             "property_context": {
                 "property_details_requested": true
-            }
+            },
+            "is_counterpart": false
+        },
+        {
+            "id": 3,
+            "session_id": "session789",
+            "property_id": "prop456",
+            "role": "seller",
+            "counterpart_id": "user_id",
+            "conversation_status": "active",
+            "started_at": "2024-03-01T14:00:00Z",
+            "last_message_at": "2024-03-01T14:30:00Z",
+            "property_context": {
+                "negotiation_in_progress": true
+            },
+            "is_counterpart": true
         }
     ]
 }
 ```
+
+This endpoint returns:
+1. All general conversations where the user is directly involved
+2. All property conversations where the user is directly involved (as `user_id`)
+3. All property conversations where the user is referenced as a counterpart (in `ExternalReference`)
+
+The `is_counterpart` flag indicates whether the user is the primary participant (`false`) or the counterpart (`true`) in the conversation. When `is_counterpart` is `true`, it means the user was notified about this conversation through the seller-buyer communication system.
+
+When filtering by `role`:
+- For direct conversations, returns those where the user's role matches the filter
+- For counterpart conversations, returns those where the counterpart's role is the opposite of the filter (e.g., if filtering for "seller", includes counterpart conversations where the user is referenced as the counterpart of a "buyer")
+
+For example:
+- If a seller filters with `role=seller`, they will see:
+  - Direct conversations where they are the seller
+  - Counterpart conversations where they are the counterpart to a buyer
+- If a buyer filters with `role=buyer`, they will see:
+  - Direct conversations where they are the buyer
+  - Counterpart conversations where they are the counterpart to a seller
 
 ## Intent Classification
 
