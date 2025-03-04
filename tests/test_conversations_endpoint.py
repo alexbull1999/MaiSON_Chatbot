@@ -11,7 +11,6 @@ from app.database.models import (
     GeneralConversation,
     ExternalReference,
 )
-from app.api.routes import Role, ConversationStatus
 
 # Create a test client
 client = TestClient(app)
