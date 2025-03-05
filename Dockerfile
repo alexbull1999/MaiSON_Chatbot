@@ -60,5 +60,16 @@ EXPOSE 8000 443
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
-# Command to run the application with HTTPS support
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"] 
+# Create startup script
+COPY <<EOF /app/start.sh
+#!/bin/bash
+echo "Running database migrations..."
+alembic upgrade head
+echo "Starting application..."
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Command to run the application with migrations
+CMD ["/app/start.sh"] 
