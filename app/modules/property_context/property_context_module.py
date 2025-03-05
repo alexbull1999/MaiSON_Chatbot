@@ -45,11 +45,11 @@ class PropertyContextModule:
                 return None
 
             # Get the property ID from the response
-            # The API returns 'property_id' instead of 'id'
-            property_id_from_api = property_data.get('id') or property_data.get('property_id')
+            # The API returns 'property_id' field
+            property_id_from_api = property_data.get('property_id')
             
             if not property_id_from_api:
-                print(f"Warning: No ID found in property data for {property_id}")
+                print(f"Warning: No property_id found in property data for {property_id}")
                 # Use the requested property_id as a fallback
                 property_id_from_api = property_id
 
@@ -62,7 +62,7 @@ class PropertyContextModule:
                 details={
                     **property_data,
                     'formatted_price': f"£{property_data['price']:,}",
-                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"  # NOQA: E501
+                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"
                 }
             )
             self.current_property = property_instance

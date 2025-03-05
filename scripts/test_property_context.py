@@ -166,7 +166,7 @@ for property_info in test_properties:
                 print(f"Found {len(similar_properties)} similar properties")
                 if len(similar_properties) > 0:
                     print(
-                        f"First similar property: {similar_properties[0].get('address', {}).get('street')}," 
+                        f"First similar property: {similar_properties[0].get('address', {}).get('street')},"
                         f"{similar_properties[0].get('address', {}).get('city')}"
                     )
             else:

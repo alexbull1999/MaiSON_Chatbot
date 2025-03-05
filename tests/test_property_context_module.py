@@ -17,7 +17,7 @@ def property_module():
 def mock_property_data():
     """Create mock property data matching the listings API format."""
     return {
-        "id": "2b6d45e8-8e61-416a-a8f1-f52d002f9a3c",
+        "property_id": "2b6d45e8-8e61-416a-a8f1-f52d002f9a3c",
         "address": {
             "street": "Sample Street",
             "city": "London",
@@ -156,7 +156,7 @@ async def test_get_or_fetch_property(property_module, mock_property_data):
     
     # Verify property instance
     assert property is not None
-    assert property.id == mock_property_data["id"]
+    assert property.id == mock_property_data["property_id"]
     assert property.name == f"{mock_property_data['address']['street']}, {mock_property_data['address']['city']}"
     assert property.type == mock_property_data["specs"]["property_type"]
     assert property.location == mock_property_data["address"]["city"]
