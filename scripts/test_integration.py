@@ -38,17 +38,13 @@ async def test_area_insights():
         for area in broad_areas:
             print(f"\nAnalyzing {area}...")
             try:
-                insights = await service.get_area_insights(
-                    area, is_broad_area=True
-                )
+                insights = await service.get_area_insights(area, is_broad_area=True)
                 insights_dict = insights.model_dump()
                 print(json.dumps(insights_dict, indent=2, default=str))
 
                 # Basic validation
                 print("\nValidation:")
-                print(
-                    f"Market overview available: {bool(insights.market_overview)}"
-                )
+                print(f"Market overview available: {bool(insights.market_overview)}")
                 print(f"Area profile available: {bool(insights.area_profile)}")
                 print(
                     f"Demographics available: {bool(insights.area_profile.demographics)}"

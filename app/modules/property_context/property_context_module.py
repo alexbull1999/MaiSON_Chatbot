@@ -44,9 +44,18 @@ class PropertyContextModule:
             if not property_data:
                 return None
 
+            # Get the property ID from the response
+            # The API returns 'property_id' instead of 'id'
+            property_id_from_api = property_data.get('id') or property_data.get('property_id')
+            
+            if not property_id_from_api:
+                print(f"Warning: No ID found in property data for {property_id}")
+                # Use the requested property_id as a fallback
+                property_id_from_api = property_id
+
             # Create Property instance from API response
             property_instance = Property(
-                id=property_data["id"],  # Now using UUID from API
+                id=property_id_from_api,
                 name=f"{property_data['address']['street']}, {property_data['address']['city']}",
                 type=property_data['specs']['property_type'],
                 location=property_data['address']['city'],
