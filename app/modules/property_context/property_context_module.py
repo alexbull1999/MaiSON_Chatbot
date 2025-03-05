@@ -62,7 +62,7 @@ class PropertyContextModule:
                 details={
                     **property_data,
                     'formatted_price': f"£{property_data['price']:,}",
-                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"
+                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"  # noqa: E501
                 }
             )
             self.current_property = property_instance
