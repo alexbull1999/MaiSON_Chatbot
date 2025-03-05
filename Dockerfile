@@ -52,8 +52,20 @@ COPY . .
 # Create startup script - do this BEFORE switching to non-root user
 COPY <<EOF /app/start.sh
 #!/bin/bash
+echo "Starting MaiSON Chatbot API..."
+
+echo "Checking database connection..."
+python -c "from app.database.db_connection import engine; engine.connect()" || { echo "Database connection failed"; exit 1; }
+
+echo "Checking current migration state..."
+alembic current
+
 echo "Running database migrations..."
-alembic upgrade head
+alembic upgrade head || { echo "Migration failed"; exit 1; }
+
+echo "Verifying database tables..."
+python -c "from app.database import Base, engine; print('Tables in metadata:', ', '.join(Base.metadata.tables.keys())); from sqlalchemy import inspect; inspector = inspect(engine); print('Tables in database:', ', '.join(inspector.get_table_names()))"
+
 echo "Starting application..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
 EOF

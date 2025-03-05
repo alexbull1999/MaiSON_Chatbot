@@ -6,7 +6,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
 
 from .api.routes import router
-from .database import SessionLocal
+from .database import SessionLocal, engine, Base
 from .modules.session_management import SessionManager
 
 # Create session manager instance
@@ -28,6 +28,12 @@ async def cleanup_sessions():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # TEMPORARY FIX: Create all tables if they don't exist
+    # This ensures the database is properly initialized
+    # Remove this once Alembic migrations are working correctly
+    print("Creating database tables if they don't exist...")
+    Base.metadata.create_all(bind=engine)
+    
     # Start the scheduler
     scheduler.add_job(
         cleanup_sessions,
