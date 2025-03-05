@@ -49,18 +49,7 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
-USER appuser
-
-# Expose both HTTP and HTTPS ports
-EXPOSE 8000 443
-
-# Healthcheck to ensure application is running
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
-
-# Create startup script
+# Create startup script - do this BEFORE switching to non-root user
 COPY <<EOF /app/start.sh
 #!/bin/bash
 echo "Running database migrations..."
@@ -69,7 +58,21 @@ echo "Starting application..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
 EOF
 
+# Set permissions on startup script - do this BEFORE switching to non-root user
 RUN chmod +x /app/start.sh
+
+# Create non-root user and change ownership AFTER creating all files
+RUN useradd -m appuser && chown -R appuser:appuser /app
+
+# Switch to non-root user AFTER all file operations that require root
+USER appuser
+
+# Expose both HTTP and HTTPS ports
+EXPOSE 8000 443
+
+# Healthcheck to ensure application is running
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/ || exit 1
 
 # Command to run the application with migrations
 CMD ["/app/start.sh"] 
