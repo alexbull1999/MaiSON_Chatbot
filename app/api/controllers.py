@@ -18,6 +18,7 @@ from app.database.schemas import GeneralChatResponse, PropertyChatResponse
 from app.modules.communication.seller_buyer_communication import (
     SellerBuyerCommunicationModule,
 )
+from app.modules.property_context.property_context_module import PropertyContextModule
 from app.modules.session_management import SessionManager
 
 
@@ -30,6 +31,7 @@ class ChatController:
     def __init__(self):
         self.message_router = MessageRouter()
         self.seller_buyer_communication = SellerBuyerCommunicationModule()
+        self.property_context = PropertyContextModule()
         self.session_manager = SessionManager()
 
     async def handle_general_chat(
@@ -199,10 +201,46 @@ class ChatController:
                 "property_context": conversation.property_context or {},
             }
 
-            # Handle message using seller-buyer communication module
-            response_text = await self.seller_buyer_communication.handle_message(
-                message=message, context=context
+            # Use message router to classify intent
+            router_response = await self.message_router.route_message(
+                message=message,
+                context=context,
+                chat_type="property"
             )
+            intent = router_response["intent"]
+
+            # Handle message based on intent
+            if intent in ["buyer_seller_communication", "negotiation"]:
+                # Use seller-buyer module for direct communications and negotiations
+                response_text = await self.seller_buyer_communication.handle_message(
+                    message=message,
+                    context=context
+                )
+                # Notify counterpart about the new message
+                await self.seller_buyer_communication.notify_counterpart(
+                    conversation_id=conversation.id,
+                    message=message,
+                    db=db,
+                    context=context
+                )
+            elif intent == "price_inquiry":
+                # Use property context module's specialized pricing handler
+                response_text = await self.property_context.handle_pricing(
+                    message=message,
+                    context={"property_id": property_id}
+                )
+            elif intent == "availability_and_booking":
+                # Use property context module's specialized booking handler
+                response_text = await self.property_context.handle_booking(
+                    message=message,
+                    context={"property_id": property_id}
+                )
+            else:
+                # All other intents are treated as general property inquiries
+                response_text = await self.property_context.handle_inquiry(
+                    message=message,
+                    context={"property_id": property_id}
+                )
 
             # Create assistant message
             assistant_message = PropertyMessage(
@@ -212,11 +250,6 @@ class ChatController:
                 timestamp=datetime.utcnow(),
             )
             db.add(assistant_message)
-
-            # Notify counterpart about the new message
-            await self.seller_buyer_communication.notify_counterpart(
-                conversation_id=conversation.id, message=message, db=db, context=context
-            )
 
             # Update conversation context
             await self._update_property_conversation_context(
@@ -234,7 +267,7 @@ class ChatController:
                 message=response_text,
                 conversation_id=conversation.id,
                 session_id=conversation.session_id,
-                intent="property_chat",
+                intent=intent,
                 property_context=conversation.property_context,
             )
 

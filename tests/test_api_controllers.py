@@ -134,12 +134,18 @@ async def test_handle_general_chat_existing_conversation(db_session, chat_contro
 @pytest.mark.asyncio
 async def test_handle_property_chat_new_conversation(db_session, chat_controller):
     """Test handling a new property chat conversation."""
-    # Mock the seller_buyer_communication module
-    chat_controller.seller_buyer_communication.handle_message = AsyncMock(
-        return_value="I can help you with information about this property."
+    # Mock the message router to return a property inquiry intent
+    chat_controller.message_router.route_message = AsyncMock(
+        return_value={
+            "intent": "property_inquiry",
+            "response": None,
+            "context": {}
+        }
     )
-    chat_controller.seller_buyer_communication.notify_counterpart = AsyncMock(
-        return_value=True
+
+    # Mock the property context module
+    chat_controller.property_context.handle_inquiry = AsyncMock(
+        return_value="This property is 1500 sq ft with 3 bedrooms and 2 bathrooms."
     )
 
     # Create a mock conversation
@@ -155,9 +161,7 @@ async def test_handle_property_chat_new_conversation(db_session, chat_controller
     mock_conversation.conversation_status = "active"
 
     # Mock database query to return our mock conversation
-    db_session.query.return_value.filter.return_value.first.return_value = (
-        mock_conversation
-    )
+    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
 
     # Test data
     message = "Tell me about this property"
@@ -177,15 +181,25 @@ async def test_handle_property_chat_new_conversation(db_session, chat_controller
         db=db_session,
     )
 
-    assert response.message == "I can help you with information about this property."
+    assert response.message == "This property is 1500 sq ft with 3 bedrooms and 2 bathrooms."
     assert response.conversation_id == 1
     assert response.session_id == "test_session"
+    assert response.intent == "property_inquiry"
 
 
 @pytest.mark.asyncio
 async def test_handle_property_chat_existing_conversation(db_session, chat_controller):
     """Test handling an existing property chat conversation."""
-    # Mock the seller_buyer_communication module
+    # Mock the message router to return a negotiation intent
+    chat_controller.message_router.route_message = AsyncMock(
+        return_value={
+            "intent": "negotiation",
+            "response": None,
+            "context": {}
+        }
+    )
+
+    # Mock the seller-buyer communication module
     chat_controller.seller_buyer_communication.handle_message = AsyncMock(
         return_value="Let me help you with your negotiation."
     )
@@ -205,9 +219,7 @@ async def test_handle_property_chat_existing_conversation(db_session, chat_contr
     mock_conversation.counterpart_id = "test_buyer"
     mock_conversation.conversation_status = "active"
 
-    db_session.query.return_value.filter.return_value.first.return_value = (
-        mock_conversation
-    )
+    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
 
     # Test data
     message = "I'd like to make a counter-offer"
@@ -230,12 +242,23 @@ async def test_handle_property_chat_existing_conversation(db_session, chat_contr
     assert response.message == "Let me help you with your negotiation."
     assert response.conversation_id == 1
     assert response.session_id == "test_session"
+    assert response.intent == "negotiation"
+    chat_controller.seller_buyer_communication.notify_counterpart.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_handle_property_chat_notification(db_session, chat_controller):
     """Test that notifications are sent during property chat."""
-    # Mock the seller_buyer_communication module
+    # Mock the message router to return a buyer_seller_communication intent
+    chat_controller.message_router.route_message = AsyncMock(
+        return_value={
+            "intent": "buyer_seller_communication",
+            "response": None,
+            "context": {}
+        }
+    )
+
+    # Mock the seller-buyer communication module
     chat_controller.seller_buyer_communication.handle_message = AsyncMock(
         return_value="I'll forward your offer to the seller."
     )
@@ -255,9 +278,7 @@ async def test_handle_property_chat_notification(db_session, chat_controller):
     mock_conversation.counterpart_id = "test_seller"
     mock_conversation.conversation_status = "active"
 
-    db_session.query.return_value.filter.return_value.first.return_value = (
-        mock_conversation
-    )
+    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
 
     # Test data
     message = "I'd like to make an offer of $450,000"
@@ -280,6 +301,7 @@ async def test_handle_property_chat_notification(db_session, chat_controller):
     assert response.message == "I'll forward your offer to the seller."
     assert response.conversation_id == 1
     assert response.session_id == "test_session"
+    assert response.intent == "buyer_seller_communication"
     chat_controller.seller_buyer_communication.notify_counterpart.assert_called_once()
 
 

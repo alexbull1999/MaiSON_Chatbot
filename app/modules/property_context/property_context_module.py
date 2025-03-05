@@ -45,24 +45,26 @@ class PropertyContextModule:
                 return None
 
             # Get the property ID from the response
-            # The API returns 'property_id' field
             property_id_from_api = property_data.get('property_id')
             
             if not property_id_from_api:
                 print(f"Warning: No property_id found in property data for {property_id}")
-                # Use the requested property_id as a fallback
                 property_id_from_api = property_id
+
+            # Create formatted address
+            address = property_data.get('address', {})
+            formatted_address = f"{address.get('house_number', '')} {address.get('street', '')}, {address.get('city', '')}, {address.get('postcode', '')}".strip()  # noqa: E501
 
             # Create Property instance from API response
             property_instance = Property(
                 id=property_id_from_api,
-                name=f"{property_data['address']['street']}, {property_data['address']['city']}",
-                type=property_data['specs']['property_type'],
-                location=property_data['address']['city'],
+                name=f"{address.get('street', '')}, {address.get('city', '')}",
+                type=property_data.get('specs', {}).get('property_type', 'Unknown'),
+                location=address.get('city', 'Unknown'),
                 details={
                     **property_data,
-                    'formatted_price': f"£{property_data['price']:,}",
-                    'formatted_address': f"{property_data['address']['street']}, {property_data['address']['city']}, {property_data['address']['postcode']}"  # noqa: E501
+                    'formatted_price': f"£{property_data.get('price', 0):,}",
+                    'formatted_address': formatted_address
                 }
             )
             self.current_property = property_instance
@@ -89,12 +91,31 @@ class PropertyContextModule:
             similar_properties = await self._fetch_similar_properties(
                 property_data.location,
                 property_data.type,
-                property_data.details.get('bedrooms', 0)
+                property_data.details.get('specs', {}).get('bedrooms', 0)
+            )
+            
+            # Format property details for the LLM
+            property_details = (
+                f"Property Details:\n"
+                f"- Address: {property_data.details.get('formatted_address')}\n"
+                f"- Type: {property_data.details.get('specs', {}).get('property_type')}\n"
+                f"- Price: {property_data.details.get('formatted_price')}\n"
+                f"- Bedrooms: {property_data.details.get('specs', {}).get('bedrooms')}\n"
+                f"- Bathrooms: {property_data.details.get('specs', {}).get('bathrooms')}\n"
+                f"- Square Footage: {property_data.details.get('specs', {}).get('square_footage')} sq ft\n"
+                f"- Features:\n"
+                f"  * Garden: {'Yes' if property_data.details.get('features', {}).get('has_garden') else 'No'}"
+                f"  * Garage: {'Yes' if property_data.details.get('features', {}).get('has_garage') else 'No'}"
+                f"  * Parking Spaces: {property_data.details.get('features', {}).get('parking_spaces', 0)}\n"
+                f"- Additional Details:\n"
+                f"  * Construction Year: {property_data.details.get('details', {}).get('construction_year', 'Not specified')}\n"
+                f"  * Heating Type: {property_data.details.get('details', {}).get('heating_type', 'Not specified')}\n"
+                f"  * EPC Rating: {property_data.details.get('specs', {}).get('epc_rating', 'Not specified')}\n"
             )
             
             # Prepare comprehensive prompt with all available information
             prompt = (
-                f"Property Details:\n{property_data}\n\n"
+                f"{property_details}\n\n"
                 f"Area Information:\n{area_insights}\n\n"
                 f"Similar Properties in the Area:\n{self._summarize_similar_properties(similar_properties)}\n\n"
                 f"User Question: {message}\n\n"
@@ -128,7 +149,7 @@ class PropertyContextModule:
             similar_properties = await self._fetch_similar_properties(
                 property_data.location,
                 property_data.type,
-                property_data.details.get('bedrooms', 0)
+                property_data.details.get('specs', {}).get('bedrooms', 0)
             )
 
             # Get area insights for market context
