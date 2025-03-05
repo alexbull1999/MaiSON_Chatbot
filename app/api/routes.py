@@ -210,87 +210,89 @@ async def get_user_conversations(
     """
     Get all conversations for a specific user.
     Optionally filter by role (buyer/seller) and conversation status.
-    
-    This endpoint returns:
-    1. General conversations where the user is directly involved
-    2. Property conversations where the user is directly involved
-    3. Property conversations where the user is referenced as a counterpart
     """
-    # Get general conversations where user is directly involved
-    general_conversations = (
-        db.query(GeneralConversationModel)
-        .filter(GeneralConversationModel.user_id == user_id)
-        .all()
-    )
-
-    # Get property conversations where user is directly involved
-    property_query = db.query(PropertyConversationModel).filter(
-        PropertyConversationModel.user_id == user_id
-    )
-
-    if role:
-        property_query = property_query.filter(PropertyConversationModel.role == role)
-    if status:
-        property_query = property_query.filter(
-            PropertyConversationModel.conversation_status == status
+    try:
+        # Get general conversations where user is directly involved
+        general_conversations = (
+            db.query(GeneralConversationModel)
+            .filter(GeneralConversationModel.user_id == user_id)
+            .all()
         )
 
-    property_conversations = property_query.all()
-    
-    # Get property conversations where user is referenced as a counterpart
-    counterpart_query = (
-        db.query(PropertyConversationModel)
-        .join(
-            ExternalReference,
-            ExternalReference.property_conversation_id == PropertyConversationModel.id
+        # Get property conversations where user is directly involved
+        property_query = db.query(PropertyConversationModel).filter(
+            PropertyConversationModel.user_id == user_id
         )
-        .filter(ExternalReference.external_id == user_id)
-        .filter(ExternalReference.service_name == "seller_buyer_communication")
-    )
-    
-    # Apply the same filters as for direct conversations
-    if role:
-        # For counterpart conversations, we need to filter by the opposite role
-        opposite_role = "seller" if role.value == "buyer" else "buyer"
-        counterpart_query = counterpart_query.filter(PropertyConversationModel.role == opposite_role)
-    if status:
-        counterpart_query = counterpart_query.filter(
-            PropertyConversationModel.conversation_status == status
-        )
-    
-    counterpart_conversations = counterpart_query.all()
-    
-    # Combine direct and counterpart property conversations, avoiding duplicates
-    seen_ids = {conv.id for conv in property_conversations}
-    for conv in counterpart_conversations:
-        if conv.id not in seen_ids:
-            property_conversations.append(conv)
-            seen_ids.add(conv.id)
 
-    return {
-        "general_conversations": [
-            {
-                "id": conv.id,
-                "session_id": conv.session_id,
-                "started_at": conv.started_at,
-                "last_message_at": conv.last_message_at,
-                "context": conv.context,
-            }
-            for conv in general_conversations
-        ],
-        "property_conversations": [
-            {
-                "id": conv.id,
-                "session_id": conv.session_id,
-                "property_id": conv.property_id,
-                "role": conv.role,
-                "counterpart_id": conv.counterpart_id,
-                "conversation_status": conv.conversation_status,
-                "started_at": conv.started_at,
-                "last_message_at": conv.last_message_at,
-                "property_context": conv.property_context,
-                "is_counterpart": conv.user_id != user_id,  # Flag to indicate if user is the counterpart
-            }
-            for conv in property_conversations
-        ],
-    }
+        if role:
+            property_query = property_query.filter(PropertyConversationModel.role == role.value)
+        if status:
+            property_query = property_query.filter(
+                PropertyConversationModel.conversation_status == status.value
+            )
+
+        property_conversations = property_query.all()
+        
+        # Get property conversations where user is referenced as a counterpart
+        counterpart_query = (
+            db.query(PropertyConversationModel)
+            .join(
+                ExternalReference,
+                ExternalReference.property_conversation_id == PropertyConversationModel.id,
+                isouter=True
+            )
+            .filter(ExternalReference.external_id == user_id)
+            .filter(ExternalReference.service_name == "seller_buyer_communication")
+        )
+        
+        # Apply the same filters as for direct conversations
+        if role:
+            # For counterpart conversations, we need to filter by the opposite role
+            opposite_role = "seller" if role.value == "buyer" else "buyer"
+            counterpart_query = counterpart_query.filter(PropertyConversationModel.role == opposite_role)
+        if status:
+            counterpart_query = counterpart_query.filter(
+                PropertyConversationModel.conversation_status == status.value
+            )
+        
+        counterpart_conversations = counterpart_query.all()
+        
+        # Combine direct and counterpart property conversations, avoiding duplicates
+        seen_ids = {conv.id for conv in property_conversations}
+        for conv in counterpart_conversations:
+            if conv.id not in seen_ids:
+                property_conversations.append(conv)
+                seen_ids.add(conv.id)
+
+        return {
+            "general_conversations": [
+                {
+                    "id": conv.id,
+                    "session_id": conv.session_id,
+                    "started_at": conv.started_at,
+                    "last_message_at": conv.last_message_at,
+                    "context": conv.context,
+                }
+                for conv in general_conversations
+            ],
+            "property_conversations": [
+                {
+                    "id": conv.id,
+                    "session_id": conv.session_id,
+                    "property_id": conv.property_id,
+                    "role": conv.role,
+                    "counterpart_id": conv.counterpart_id,
+                    "conversation_status": conv.conversation_status,
+                    "started_at": conv.started_at,
+                    "last_message_at": conv.last_message_at,
+                    "property_context": conv.property_context,
+                    "is_counterpart": conv.user_id != user_id,  # Flag to indicate if user is the counterpart
+                }
+                for conv in property_conversations
+            ],
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving conversations: {str(e)}"
+        )
