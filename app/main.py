@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
+from sqlalchemy import inspect
 
 from .api.routes import router
 from .database import SessionLocal, engine, Base
@@ -26,13 +27,30 @@ async def cleanup_sessions():
     finally:
         db.close()
 
+def create_tables_if_not_exist():
+    """Create database tables if they don't exist."""
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+    required_tables = [table_name for table_name in Base.metadata.tables.keys()]
+    
+    print(f"Required tables: {', '.join(required_tables)}")
+    print(f"Existing tables: {', '.join(existing_tables)}")
+    
+    missing_tables = [table for table in required_tables if table not in existing_tables]
+    
+    if missing_tables:
+        print(f"Creating missing tables: {', '.join(missing_tables)}")
+        # Create only the tables that don't exist yet
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully")
+    else:
+        print("All required tables already exist")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # TEMPORARY FIX: Create all tables if they don't exist
-    # This ensures the database is properly initialized
-    # Remove this once Alembic migrations are working correctly
-    print("Creating database tables if they don't exist...")
-    Base.metadata.create_all(bind=engine)
+    # Create database tables if they don't exist
+    print("Checking and creating database tables if needed...")
+    create_tables_if_not_exist()
     
     # Start the scheduler
     scheduler.add_job(

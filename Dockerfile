@@ -49,34 +49,8 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 # Copy application code
 COPY . .
 
-# Create startup script - do this BEFORE switching to non-root user
-COPY <<EOF /app/start.sh
-#!/bin/bash
-echo "Starting MaiSON Chatbot API..."
-
-echo "Checking database connection..."
-python -c "from app.database.db_connection import engine; engine.connect()" || { echo "Database connection failed"; exit 1; }
-
-echo "Checking current migration state..."
-alembic current
-
-echo "Running database migrations..."
-alembic upgrade head || { echo "Migration failed"; exit 1; }
-
-echo "Verifying database tables..."
-python -c "from app.database import Base, engine; print('Tables in metadata:', ', '.join(Base.metadata.tables.keys())); from sqlalchemy import inspect; inspector = inspect(engine); print('Tables in database:', ', '.join(inspector.get_table_names()))"
-
-echo "Starting application..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
-EOF
-
-# Set permissions on startup script - do this BEFORE switching to non-root user
-RUN chmod +x /app/start.sh
-
-# Create non-root user and change ownership AFTER creating all files
+# Create non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
-
-# Switch to non-root user AFTER all file operations that require root
 USER appuser
 
 # Expose both HTTP and HTTPS ports
@@ -86,5 +60,5 @@ EXPOSE 8000 443
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
-# Command to run the application with migrations
-CMD ["/app/start.sh"] 
+# Command to run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"] 
