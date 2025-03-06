@@ -50,7 +50,7 @@ def create_tables_if_not_exist():
 async def lifespan(app: FastAPI):
     # Create database tables if they don't exist
     print("Checking and creating database tables if needed...")
-    # create_tables_if_not_exist() # TODO: Uncomment this if schema changes are needed
+    create_tables_if_not_exist() 
     
     # Start the scheduler
     scheduler.add_job(

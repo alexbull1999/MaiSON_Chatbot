@@ -31,6 +31,9 @@ graph TD
         Module3[Greeting Module]
         Module4[Website Info Module]
         Module5[Seller-Buyer Communication]
+        Module6[Negotiation Module]
+        Module7[Pricing Module]
+        Module8[Property Listings Module]
     end
     
     %% Data Services (listed separately)
@@ -45,7 +48,7 @@ graph TD
     classDef llm fill:#fbf,stroke:#333,stroke-width:1px
     
     class Client,API,Controller primary
-    class Router,Classifier,Modules,Module1,Module2,Module3,Module4,Module5,SessionManager secondary
+    class Router,Classifier,Modules,Module1,Module2,Module3,Module4,Module5,Module6,Module7,Module8,SessionManager secondary
     class Database,DataServices,Service1,ExternalAPIs data
     class LLM llm
 ``` 
