@@ -7,6 +7,7 @@ from .communication.seller_buyer_communication import SellerBuyerCommunicationMo
 from .context_manager import ContextManager
 from .greeting.greeting_module import GreetingModule
 from .website_info import WebsiteInfoModule
+from .property_listings import PropertyListingsModule
 
 
 class MessageRouter:
@@ -19,6 +20,7 @@ class MessageRouter:
         self.context_manager = ContextManager()
         self.greeting_module = GreetingModule()
         self.website_info_module = WebsiteInfoModule()
+        self.property_listings_module = PropertyListingsModule()
 
     async def process_message(
         self, message: str, context: Optional[Dict] = None
@@ -55,6 +57,7 @@ class MessageRouter:
             Intent.GENERAL_QUESTION: self.advisory_module.handle_general_inquiry,
             Intent.WEBSITE_FUNCTIONALITY: self.website_info_module.handle_website_functionality,
             Intent.COMPANY_INFORMATION: self.website_info_module.handle_company_information,
+            Intent.PROPERTY_LISTINGS_INQUIRY: self.property_listings_module.handle_inquiry,
             Intent.UNKNOWN: self.communication_module.handle_unclear_intent,
         }
 
@@ -83,13 +86,21 @@ class MessageRouter:
                     # to catch website and company information queries
                     specific_intent = await self.intent_classifier.classify(message)
                     
-                    if specific_intent in [Intent.WEBSITE_FUNCTIONALITY, Intent.COMPANY_INFORMATION]:
+                    if specific_intent in [Intent.WEBSITE_FUNCTIONALITY, Intent.COMPANY_INFORMATION, Intent.PROPERTY_LISTINGS_INQUIRY]:
                         # Update context with the intent
                         context_with_intent = context.copy() if context else {}
                         context_with_intent["intent"] = specific_intent.value
                         
-                        # Route to website info module
-                        response = await self._route_intent(specific_intent, message, context_with_intent)
+                        # Extract user_id from context if available (for property listings)
+                        user_id = context.get("user_id") if context else None
+                        
+                        # Route to appropriate module based on specific intent
+                        if specific_intent == Intent.PROPERTY_LISTINGS_INQUIRY:
+                            response = await self.property_listings_module.handle_inquiry(message, context_with_intent, user_id)
+                        else:
+                            # Route to website info module
+                            response = await self._route_intent(specific_intent, message, context_with_intent)
+                        
                         return {
                             "response": response,
                             "intent": specific_intent.value,

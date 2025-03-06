@@ -12,6 +12,7 @@ class Intent(Enum):
     NEGOTIATION = "negotiation"
     WEBSITE_FUNCTIONALITY = "website_functionality"
     COMPANY_INFORMATION = "company_information"
+    PROPERTY_LISTINGS_INQUIRY = "property_listings_inquiry"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -52,6 +53,9 @@ class IntentClassifier:
             ),
             Intent.COMPANY_INFORMATION: (
                 "Questions about MaiSON company history, mission, team, or other company-specific information"
+            ),
+            Intent.PROPERTY_LISTINGS_INQUIRY: (
+                "Questions about available properties on MaiSON, property recommendations, or searching for properties with specific criteria"
             ),
             Intent.UNKNOWN: (
                 "Messages that don't clearly fit into other categories"
@@ -113,6 +117,12 @@ class IntentClassifier:
             "- \"Who is on your leadership team?\" -> \"company_information\"\n"
             "- \"What is MaiSON's mission?\" -> \"company_information\"\n"
             "- \"Tell me about your company's history\" -> \"company_information\"\n\n"
+            "# Property Listings Inquiry Examples:\n"
+            "- \"What properties do you have available in London?\" -> \"property_listings_inquiry\"\n"
+            "- \"Show me 3-bedroom houses under £400,000\" -> \"property_listings_inquiry\"\n"
+            "- \"Do you have any properties with a garden in Manchester?\" -> \"property_listings_inquiry\"\n"
+            "- \"What are your newest listings?\" -> \"property_listings_inquiry\"\n"
+            "- \"Can you recommend properties similar to my saved ones?\" -> \"property_listings_inquiry\"\n\n"
             "Classify the following message:\n"
         )
         return prompt
