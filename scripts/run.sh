@@ -11,8 +11,8 @@ if [ -f ".env" ]; then
 fi
 
 # Run database migrations
-echo "Running database migrations..."
-alembic upgrade head
+# echo "Running database migrations..."
+# alembic upgrade head
 
 # Start the FastAPI server
 echo "Starting maiSON Chatbot server..."
