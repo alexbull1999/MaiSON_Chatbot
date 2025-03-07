@@ -39,11 +39,14 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          AZURE_POSTGRES_HOST: ${{ secrets.AZURE_POSTGRES_HOST }}
-          AZURE_POSTGRES_USER: ${{ secrets.AZURE_POSTGRES_USER }}
-          AZURE_POSTGRES_PASSWORD: ${{ secrets.AZURE_POSTGRES_PASSWORD }}
-          AZURE_POSTGRES_DB: ${{ secrets.AZURE_POSTGRES_DB }}
-          AZURE_POSTGRES_PORT: ${{ secrets.AZURE_POSTGRES_PORT }}
+          # Use test database settings instead of production
+          AZURE_POSTGRES_HOST: "localhost"
+          AZURE_POSTGRES_USER: "test_user"
+          AZURE_POSTGRES_PASSWORD: "test_password"
+          AZURE_POSTGRES_DB: "test_db"
+          AZURE_POSTGRES_PORT: "5432"
+          # Flag to indicate test environment
+          TEST_ENVIRONMENT: "true"
         run: pytest -v
 
   build-and-push:
