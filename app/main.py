@@ -93,7 +93,7 @@ app.add_middleware(
         "https://maison-apim.azure-api.net/api/chat/property",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],  # Allow all headers for development ease
     expose_headers=[
         "Content-Length",
