@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 import uuid
 
@@ -142,19 +142,10 @@ class ChatController:
         role: Role,
         counterpart_id: str,  # UUID string for the other party
         session_id: str,
-        db: Session = Depends(get_db),
+        db: Session,
     ) -> PropertyChatResponse:
         """
         Handle property-specific chat messages between buyers and sellers.
-
-        Args:
-            message: The user's message
-            user_id: Authenticated user's ID (UUID string from Firebase)
-            property_id: ID of the property being discussed
-            role: Role of the user (buyer/seller)
-            counterpart_id: ID of the other party in the conversation (UUID string from Firebase)
-            session_id: Session ID for conversation tracking
-            db: Database session
         """
         try:
             # Get or create property conversation
@@ -174,6 +165,25 @@ class ChatController:
                     detail="Property conversation session has expired or been archived."
                 )
 
+            # Check for duplicate message within last minute
+            last_minute = datetime.utcnow() - timedelta(minutes=1)
+            duplicate_message = (
+                db.query(PropertyMessage)
+                .filter(
+                    PropertyMessage.conversation_id == conversation.id,
+                    PropertyMessage.role == role,
+                    PropertyMessage.content == message,
+                    PropertyMessage.timestamp >= last_minute
+                )
+                .first()
+            )
+            
+            if duplicate_message:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Duplicate message detected. Please wait a moment before sending the same message again."
+                )
+
             # Create user message
             user_message = PropertyMessage(
                 conversation_id=conversation.id,
@@ -182,6 +192,7 @@ class ChatController:
                 timestamp=datetime.utcnow(),
             )
             db.add(user_message)
+            db.flush()  # Get the message ID
 
             # Get conversation history
             conversation_history = [
@@ -199,6 +210,8 @@ class ChatController:
                 "counterpart_id": conversation.counterpart_id,
                 "conversation_history": conversation_history,
                 "property_context": conversation.property_context or {},
+                "db": db,  # Add database session to context
+                "message_id": user_message.id  # Add message ID to context
             }
 
             # Use message router to classify intent
@@ -216,7 +229,7 @@ class ChatController:
                     message=message,
                     context=context
                 )
-                # Notify counterpart about the new message
+                # Notify counterpart for both negotiation and buyer_seller_communication
                 await self.seller_buyer_communication.notify_counterpart(
                     conversation_id=conversation.id,
                     message=message,
@@ -258,10 +271,6 @@ class ChatController:
 
             # Update last message timestamp
             conversation.last_message_at = datetime.utcnow()
-            db.commit()
-
-            # Refresh session activity
-            await self.session_manager.refresh_session(conversation)
 
             return PropertyChatResponse(
                 message=response_text,
@@ -272,10 +281,8 @@ class ChatController:
             )
 
         except HTTPException:
-            db.rollback()
             raise
         except Exception as e:
-            db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
 
     async def _get_or_create_general_conversation(

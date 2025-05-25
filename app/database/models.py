@@ -66,6 +66,9 @@ class PropertyConversation(Base):
     # Relationship to messages
     messages = relationship("PropertyMessage", back_populates="conversation", cascade="all, delete-orphan")
 
+    # Add this to the PropertyConversation class relationships
+    questions = relationship("PropertyQuestion", back_populates="conversation", cascade="all, delete-orphan")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Validate role
@@ -107,4 +110,24 @@ class ExternalReference(Base):
         super().__init__(**kwargs)
         # Ensure only one conversation type is set
         if kwargs.get('general_conversation_id') and kwargs.get('property_conversation_id'):
-            raise ValueError("Cannot reference both general and property conversations") 
+            raise ValueError("Cannot reference both general and property conversations")
+
+class PropertyQuestion(Base):
+    """Tracks questions asked by buyers to sellers about specific properties."""
+    __tablename__ = "property_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    property_id = Column(String(255), nullable=False, index=True)
+    buyer_id = Column(String(255), nullable=False, index=True)  # UUID of buyer who asked
+    seller_id = Column(String(255), nullable=False, index=True)  # UUID of seller to answer
+    conversation_id = Column(Integer, ForeignKey('property_conversations.id'), nullable=False)
+    question_message_id = Column(Integer, ForeignKey('property_messages.id'), nullable=False)
+    question_text = Column(Text, nullable=False)
+    status = Column(String(50), nullable=False, default="pending")  # pending, answered, expired
+    created_at = Column(DateTime, default=datetime.utcnow)
+    answered_at = Column(DateTime, nullable=True)
+    answer_text = Column(Text, nullable=True)
+    
+    # Relationships
+    conversation = relationship("PropertyConversation", back_populates="questions")
+    question_message = relationship("PropertyMessage", foreign_keys=[question_message_id]) 

@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from ...database.models import ExternalReference
+from ...database.models import ExternalReference, PropertyQuestion, PropertyConversation, PropertyMessage
 from ..llm import LLMClient
 
 
@@ -35,6 +35,11 @@ class SellerBuyerCommunicationModule:
             # Get conversation history
             history = context.get("conversation_history", [])
 
+            # If this is a buyer asking a question that needs seller input
+            if context["role"] == "buyer" and self._needs_seller_input(message):
+                return await self._handle_buyer_question(message, context)
+
+            # For all other messages, just generate a response
             # Prepare message context for LLM
             message_context = {
                 "sender_role": context["role"],
@@ -84,6 +89,26 @@ class SellerBuyerCommunicationModule:
             context: Contains sender and recipient information
         """
         try:
+            # Skip question creation if this is a notification for an existing question
+            if context.get("notification_type") == "new_question":
+                # Just create the external reference for notification
+                external_ref = ExternalReference(
+                    property_conversation_id=conversation_id,
+                    service_name="seller_buyer_communication",
+                    external_id=context["counterpart_id"],
+                    reference_metadata={
+                        "message_forwarded": True,
+                        "forwarded_at": datetime.utcnow().isoformat(),
+                        "property_id": context["property_id"],
+                        "sender_role": context["role"],
+                        "message_type": self._classify_message_type(message),
+                        "question_id": context.get("question_id")
+                    },
+                )
+                db.add(external_ref)
+                db.commit()
+                return True
+
             # Format message for the counterpart
             formatted_message = await self.format_message_for_counterpart(
                 message, context["role"], context.get("property_context")
@@ -205,3 +230,130 @@ class SellerBuyerCommunicationModule:
             return False
 
         return True
+
+    def _needs_seller_input(self, message: str) -> bool:
+        """
+        Determine if a message requires seller input based on content analysis.
+        """
+        # Common patterns indicating need for seller input
+        patterns = [
+            "ask the seller",
+            "can you ask",
+            "check with the seller",
+            "find out from the seller",
+            "ask them about",
+            "could you ask",
+            "please ask",
+        ]
+        return any(pattern in message.lower() for pattern in patterns)
+
+    async def _handle_buyer_question(self, message: str, context: Dict) -> str:
+        """
+        Handle a buyer's question that needs to be forwarded to the seller.
+        Creates a PropertyQuestion record and notifies the seller.
+        """
+        db = context["db"]
+        try:
+            # Check if a question with this message_id already exists
+            existing_question = db.query(PropertyQuestion).filter(
+                PropertyQuestion.question_message_id == context["message_id"]
+            ).first()
+            
+            if existing_question:
+                return "I will forward your question to the seller and let you know once I have a response."
+
+            # Create PropertyQuestion record
+            question = PropertyQuestion(
+                property_id=context["property_id"],
+                buyer_id=context["user_id"],
+                seller_id=context["counterpart_id"],
+                conversation_id=context["conversation_id"],
+                question_message_id=context["message_id"],
+                question_text=message,
+            )
+            
+            # Add to database
+            db.add(question)
+            db.flush()  # Get the question ID
+
+            # Create notification reference
+            external_ref = ExternalReference(
+                property_conversation_id=context["conversation_id"],
+                service_name="seller_buyer_communication",
+                external_id=context["counterpart_id"],
+                reference_metadata={
+                    "message_forwarded": True,
+                    "forwarded_at": datetime.utcnow().isoformat(),
+                    "property_id": context["property_id"],
+                    "sender_role": context["role"],
+                    "message_type": self._classify_message_type(message),
+                    "question_id": question.id,
+                    "notification_type": "new_question"
+                },
+            )
+            db.add(external_ref)
+
+            return "I will forward your question to the seller and let you know once I have a response."
+
+        except Exception as e:
+            print(f"Error handling buyer question: {str(e)}")
+            raise  # Let the transaction handling in the route handle the rollback
+
+    async def handle_seller_response(
+        self, 
+        question_id: int, 
+        answer: str, 
+        db: Session
+    ) -> bool:
+        """
+        Handle a seller's response to a buyer's question.
+        Updates the PropertyQuestion record and notifies the buyer.
+        """
+        try:
+            # Get the question record
+            question = db.query(PropertyQuestion).filter(
+                PropertyQuestion.id == question_id
+            ).first()
+            
+            if not question:
+                return False
+                
+            # Check if question is already answered
+            if question.status == "answered":
+                return False
+
+            # Update question record
+            question.status = "answered"
+            question.answer_text = answer
+            question.answered_at = datetime.utcnow()
+            
+            # Get the original conversation
+            conversation = db.query(PropertyConversation).filter(
+                PropertyConversation.id == question.conversation_id
+            ).first()
+
+            if not conversation:
+                return False
+
+            # Create a new message in the conversation with the answer
+            answer_message = PropertyMessage(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=f"The seller has responded to your question:\n\n{answer}",
+                intent="buyer_seller_communication",
+                message_metadata={
+                    "is_seller_response": True,
+                    "original_question_id": question_id
+                }
+            )
+            db.add(answer_message)
+            
+            # Commit changes
+            db.commit()
+            
+            return True
+
+        except Exception as e:
+            print(f"Error handling seller response: {str(e)}")
+            db.rollback()
+            return False

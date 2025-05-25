@@ -160,8 +160,11 @@ async def test_handle_property_chat_new_conversation(db_session, chat_controller
     mock_conversation.counterpart_id = "test_seller"
     mock_conversation.conversation_status = "active"
 
-    # Mock database query to return our mock conversation
-    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
+    # Mock database queries
+    db_session.query.return_value.filter.return_value.first.side_effect = [
+        mock_conversation,  # For conversation lookup
+        None,  # For duplicate message check
+    ]
 
     # Test data
     message = "Tell me about this property"
@@ -219,7 +222,11 @@ async def test_handle_property_chat_existing_conversation(db_session, chat_contr
     mock_conversation.counterpart_id = "test_buyer"
     mock_conversation.conversation_status = "active"
 
-    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
+    # Mock database queries
+    db_session.query.return_value.filter.return_value.first.side_effect = [
+        mock_conversation,  # For conversation lookup
+        None,  # For duplicate message check
+    ]
 
     # Test data
     message = "I'd like to make a counter-offer"
@@ -278,7 +285,11 @@ async def test_handle_property_chat_notification(db_session, chat_controller):
     mock_conversation.counterpart_id = "test_seller"
     mock_conversation.conversation_status = "active"
 
-    db_session.query.return_value.filter.return_value.first.return_value = mock_conversation
+    # Mock database queries
+    db_session.query.return_value.filter.return_value.first.side_effect = [
+        mock_conversation,  # For conversation lookup
+        None,  # For duplicate message check
+    ]
 
     # Test data
     message = "I'd like to make an offer of $450,000"

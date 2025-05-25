@@ -10,6 +10,7 @@ from app.database.models import (
     GeneralConversation as GeneralConversationModel,
     PropertyConversation as PropertyConversationModel,
     ExternalReference,
+    PropertyQuestion,
 )
 from .controllers import chat_controller
 from pydantic import BaseModel
@@ -45,6 +46,12 @@ class PropertyChatRequest(BaseModel):
 
 class ConversationStatusUpdate(BaseModel):
     status: ConversationStatus
+
+
+class PropertyQuestionResponse(BaseModel):
+    """Schema for responding to a property question."""
+    question_id: int
+    answer: str
 
 
 router = APIRouter()
@@ -99,18 +106,27 @@ async def property_chat_endpoint(
         # Generate session ID if not provided
         session_id = request.session_id or str(uuid.uuid4())
 
-        response = await chat_controller.handle_property_chat(
-            message=request.message,
-            user_id=request.user_id,
-            property_id=request.property_id,
-            role=request.role,
-            counterpart_id=request.counterpart_id,
-            session_id=session_id,
-            db=db,
-        )
-        return response
+        # Start a single database transaction for the entire request
+        db.begin()
+        try:
+            response = await chat_controller.handle_property_chat(
+                message=request.message,
+                user_id=request.user_id,
+                property_id=request.property_id,
+                role=request.role,
+                counterpart_id=request.counterpart_id,
+                session_id=session_id,
+                db=db,
+            )
+            db.commit()
+            return response
+        except Exception as e:
+            db.rollback()
+            raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if not isinstance(e, HTTPException):
+            raise HTTPException(status_code=500, detail=str(e))
+        raise e
 
 
 @router.get("/conversations/general/{conversation_id}/history")
@@ -296,3 +312,57 @@ async def get_user_conversations(
             status_code=500,
             detail=f"Error retrieving conversations: {str(e)}"
         )
+
+
+@router.get("/seller/questions/{seller_id}")
+async def get_seller_questions(
+    seller_id: str,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Get all questions for a seller, optionally filtered by status.
+    """
+    query = db.query(PropertyQuestion).filter(PropertyQuestion.seller_id == seller_id)
+    
+    if status:
+        query = query.filter(PropertyQuestion.status == status)
+    
+    questions = query.order_by(PropertyQuestion.created_at.desc()).all()
+    
+    return {
+        "questions": [
+            {
+                "id": q.id,
+                "property_id": q.property_id,
+                "buyer_id": q.buyer_id,
+                "question_text": q.question_text,
+                "status": q.status,
+                "created_at": q.created_at,
+                "answered_at": q.answered_at,
+                "answer_text": q.answer_text,
+            }
+            for q in questions
+        ]
+    }
+
+
+@router.post("/seller/questions/{question_id}/answer")
+async def answer_property_question(
+    question_id: int,
+    response: PropertyQuestionResponse,
+    db: Session = Depends(get_db),
+):
+    """
+    Handle a seller's response to a property question.
+    """
+    result = await chat_controller.seller_buyer_communication.handle_seller_response(
+        question_id=question_id,
+        answer=response.answer,
+        db=db
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Question not found or could not be answered")
+    
+    return {"status": "success", "message": "Answer recorded and sent to buyer"}

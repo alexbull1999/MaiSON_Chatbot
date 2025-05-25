@@ -259,6 +259,104 @@ The API automatically classifies messages into the following intents:
 - `general_question`: General inquiries
 - `unknown`: Unclear or unclassified messages
 
+## Property Questions API
+
+The Property Questions API enables asynchronous communication between buyers and sellers through a structured Q&A system.
+
+### Get Seller Questions
+
+Retrieve all questions for a specific seller, with optional status filtering.
+
+```bash
+GET /api/v1/seller/questions/{seller_id}
+GET /api/v1/seller/questions/{seller_id}?status={status}
+```
+
+Parameters:
+- `seller_id` (path, required): The ID of the seller
+- `status` (query, optional): Filter questions by status (`pending` or `answered`)
+
+Response:
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "property_id": "property123",
+      "buyer_id": "buyer456",
+      "question_text": "How far is the nearest tube station?",
+      "status": "pending",
+      "created_at": "2024-03-25T10:30:00Z",
+      "answered_at": null,
+      "answer_text": null
+    }
+  ]
+}
+```
+
+If no questions exist, returns an empty array:
+```json
+{
+  "questions": []
+}
+```
+
+### Answer Property Question
+
+Submit an answer to a specific property question.
+
+```bash
+POST /api/v1/seller/questions/{question_id}/answer
+Content-Type: application/json
+
+{
+  "question_id": 1,
+  "answer": "The nearest tube station is Baker Street, about 5 minutes walk away."
+}
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "message": "Answer recorded and sent to buyer"
+}
+```
+
+Error responses:
+- `404`: Question not found or could not be answered
+- `422`: Invalid request body
+
+### Creating Questions (via Property Chat)
+
+Questions are automatically created when a buyer sends a message through the property chat endpoint that requires seller input. The system detects these messages using patterns like "ask the seller", "can you ask", etc.
+
+Example buyer message that creates a question:
+```bash
+POST /api/v1/chat/property
+Content-Type: application/json
+
+{
+  "message": "Can you ask the seller how far the nearest tube station is?",
+  "user_id": "buyer123",
+  "property_id": "property456",
+  "role": "buyer",
+  "counterpart_id": "seller789",
+  "session_id": "session123"
+}
+```
+
+Response when a question is created:
+```json
+{
+  "message": "I will forward your question to the seller and let you know once I have a response.",
+  "conversation_id": 1,
+  "session_id": "session123",
+  "intent": "buyer_seller_communication",
+  "property_context": null
+}
+```
+
 ## Error Handling
 
 The API uses standard HTTP status codes:
