@@ -143,8 +143,16 @@ async def test_seller_answering_question(db_session, mock_property_question, moc
     assert added_message.message_metadata["original_question_id"] == mock_property_question.id
 
 @pytest.mark.asyncio
-async def test_get_seller_questions_endpoint():
+async def test_get_seller_questions_endpoint(db_session, mock_property_question, override_get_db):
     """Test the endpoint for getting a seller's questions."""
+    # Mock database query to return a list of questions
+    mock_questions = [mock_property_question]
+    mock_query = MagicMock()
+    mock_query.filter.return_value = mock_query
+    mock_query.order_by.return_value = mock_query
+    mock_query.all.return_value = mock_questions
+    db_session.query.return_value = mock_query
+    
     # Make request to get seller's questions
     response = client.get("/api/v1/seller/questions/test_seller_1")
     
@@ -153,18 +161,18 @@ async def test_get_seller_questions_endpoint():
     data = response.json()
     assert "questions" in data
     assert isinstance(data["questions"], list)
+    assert len(data["questions"]) == 1
     
-    # If there are questions, verify their structure
-    if data["questions"]:
-        question = data["questions"][0]
-        assert "id" in question
-        assert "property_id" in question
-        assert "buyer_id" in question
-        assert "question_text" in question
-        assert "status" in question
-        assert "created_at" in question
-        assert "answered_at" in question
-        assert "answer_text" in question
+    # Verify question structure
+    question = data["questions"][0]
+    assert question["id"] == mock_property_question.id
+    assert question["property_id"] == mock_property_question.property_id
+    assert question["buyer_id"] == mock_property_question.buyer_id
+    assert question["question_text"] == mock_property_question.question_text
+    assert question["status"] == mock_property_question.status
+    assert "created_at" in question
+    assert "answered_at" in question
+    assert "answer_text" in question
 
 @pytest.mark.asyncio
 async def test_answer_question_endpoint(db_session, mock_property_question, mock_property_conversation, override_get_db):
