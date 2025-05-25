@@ -7,7 +7,6 @@ Create Date: 2024-03-19 12:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from datetime import datetime
 
 # revision identifiers, used by Alembic
 revision = 'add_property_questions'
