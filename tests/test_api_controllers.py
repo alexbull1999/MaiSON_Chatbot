@@ -350,7 +350,7 @@ async def test_handle_property_chat_error(db_session, chat_controller):
             session_id="test_session",
             db=db_session,
         )
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 400
     assert "expired" in str(exc_info.value.detail).lower()
 
 

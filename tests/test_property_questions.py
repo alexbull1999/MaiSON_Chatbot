@@ -280,16 +280,10 @@ async def test_question_reformatting(db_session, mock_property_conversation):
     # Create communication module
     comm_module = SellerBuyerCommunicationModule()
 
-    # Mock LLM responses for different calls
-    async def mock_llm_response(*args, **kwargs):
-        messages = kwargs.get('messages', [])
-        if any("determine if a buyer's message requires input from the seller" in msg.get('content', '') for msg in messages):
-            return "yes"
-        elif any("reformat buyer questions" in msg.get('content', '') for msg in messages):
-            return "Does the property have an underground bunker?"
-        return "need_seller_input"  # Default response
-
-    comm_module.llm_client.generate_response = AsyncMock(side_effect=mock_llm_response)
+    # Mock LLM response for question reformatting
+    comm_module.llm_client.generate_response = AsyncMock(
+        return_value="Does the property have an underground bunker?"
+    )
 
     # Mock database queries
     db_session.query.return_value.filter.return_value.first.side_effect = [
@@ -330,38 +324,13 @@ async def test_question_reformatting(db_session, mock_property_conversation):
     assert isinstance(calls[1][0][0], ExternalReference)
 
 @pytest.mark.asyncio
-async def test_question_confirmation_flow(db_session, mock_property_conversation):
-    """Test the flow of asking a question, getting confirmation, and forwarding to seller."""
-    # Create communication module
+async def test_question_confirmation_handling(db_session, mock_property_conversation):
+    """Test that confirmation responses are properly handled."""
+    # First test case: Confirmation with question context
     comm_module = SellerBuyerCommunicationModule()
-
-    # Track which messages have been processed to handle state
-    processed_messages = []
-
-    # Mock LLM responses for different calls
-    async def mock_llm_response(*args, **kwargs):
-        messages = kwargs.get('messages', [])
-        message_content = messages[1]['content'] if len(messages) > 1 else ""
-        
-        # Store the message for state tracking
-        processed_messages.append(message_content)
-
-        # Initial question should trigger needs_seller_input check
-        if "Do you know if the property is near a bakery?" in message_content:
-            if any("determine if a buyer's message requires input from the seller" in msg.get('content', '') for msg in messages):
-                return "no"  # First time, say no to trigger confirmation flow
-            return "need_seller_input"
-        
-        # Confirmation message should be recognized
-        elif "Yes please" in message_content:
-            if any("determine if a buyer's message is confirming" in msg.get('content', '') for msg in messages):
-                return "yes"
-            elif any("reformat buyer questions" in msg.get('content', '') for msg in messages):
-                return "Are there any bakeries near the property?"
-        
-        return "need_seller_input"
-
-    comm_module.llm_client.generate_response = AsyncMock(side_effect=mock_llm_response)
+    comm_module.llm_client.generate_response = AsyncMock(
+        return_value="Are there any bakeries near the property?"
+    )
 
     # Mock database queries
     db_session.query.return_value.filter.return_value.first.side_effect = [
@@ -369,74 +338,7 @@ async def test_question_confirmation_flow(db_session, mock_property_conversation
         mock_property_conversation  # For conversation lookup
     ]
 
-    # Create context
-    context = {
-        "conversation_id": mock_property_conversation.id,
-        "user_id": "test_buyer",
-        "role": "buyer",
-        "counterpart_id": "test_seller",
-        "property_id": "test_property",
-        "db": db_session,
-        "message_id": 1
-    }
-
-    # Step 1: Buyer asks initial question
-    initial_question = "Do you know if the property is near a bakery?"
-    response = await comm_module.handle_message(message=initial_question, context=context)
-
-    # Verify that Mia asks for confirmation
-    assert response == "Would you like me to pass this question on to the seller?"
-    assert mock_property_conversation.id in comm_module.pending_questions
-    assert comm_module.pending_questions[mock_property_conversation.id] == initial_question
-
-    # Step 2: Buyer confirms
-    confirmation_response = await comm_module.handle_message(message="Yes please", context=context)
-
-    # Verify that the question was forwarded
-    assert confirmation_response == "I will forward your question to the seller and let you know once I have a response."
-    assert mock_property_conversation.id not in comm_module.pending_questions
-
-@pytest.mark.asyncio
-async def test_property_listing_info_handling(db_session, mock_property_conversation):
-    """Test handling of questions about information available in property listing."""
-    comm_module = SellerBuyerCommunicationModule()
-
-    # Track which messages have been processed to handle state
-    processed_messages = []
-
-    # Mock LLM responses for different calls
-    async def mock_llm_response(*args, **kwargs):
-        messages = kwargs.get('messages', [])
-        message_content = messages[1]['content'] if len(messages) > 1 else ""
-        
-        # Store the message for state tracking
-        processed_messages.append(message_content)
-
-        # Basic property info question
-        if "How many bedrooms and bathrooms" in message_content:
-            if any("determine if a buyer's message requires input from the seller" in msg.get('content', '') for msg in messages):
-                return "no"
-            elif any("Answer the buyer's question using the available property listing information" in msg.get('content', '') for msg in messages):
-                return "The property has 3 bedrooms and 2 bathrooms."
-        
-        # Renovation question should need seller input
-        elif "renovation" in message_content:
-            if any("determine if a buyer's message requires input from the seller" in msg.get('content', '') for msg in messages):
-                return "yes"
-            elif any("reformat buyer questions" in msg.get('content', '') for msg in messages):
-                return "Has there been any recent renovation work?"
-        
-        # EPC rating question with no context
-        elif "EPC rating" in message_content:
-            if any("determine if a buyer's message requires input from the seller" in msg.get('content', '') for msg in messages):
-                return "no"
-            return "need_seller_input"
-
-        return "need_seller_input"
-
-    comm_module.llm_client.generate_response = AsyncMock(side_effect=mock_llm_response)
-
-    # Create context with property information
+    # Create context with conversation history
     context = {
         "conversation_id": mock_property_conversation.id,
         "user_id": "test_buyer",
@@ -445,30 +347,143 @@ async def test_property_listing_info_handling(db_session, mock_property_conversa
         "property_id": "test_property",
         "db": db_session,
         "message_id": 1,
-        "property_context": {
-            "bedrooms": 3,
-            "bathrooms": 2,
-            "price": 500000,
-            "size": 1500,
-            "location": "London",
-            "epc_rating": "B",
-            "has_garden": True,
-            "parking_spaces": 2
-        }
+        "conversation_history": [
+            {"role": "user", "content": "Are there any bakeries near the property?"},
+            {"role": "assistant", "content": "Would you like me to ask the seller about bakeries in the area?"},
+        ]
     }
 
-    # Test 1: Question about basic property info
-    response = await comm_module.handle_message("How many bedrooms and bathrooms does the property have?", context)
-    assert "3 bedrooms" in response.lower()
-    assert "2 bathrooms" in response.lower()
+    # Test simple confirmation response
+    message = "Yes please"
+    response = await comm_module.handle_message(message=message, context=context)
 
-    # Test 2: Question requiring seller input
-    response = await comm_module.handle_message("Has there been any recent renovation work?", context)
+    # Verify response
     assert response == "I will forward your question to the seller and let you know once I have a response."
 
-    # Test 3: Question about property info but data not available
-    context_without_property_info = context.copy()
-    context_without_property_info["property_context"] = {}
+    # Verify the question was created with the original question text
+    calls = db_session.add.call_args_list
+    assert len(calls) == 2  # One for question, one for external reference
+    saved_question = calls[0][0][0]
+    assert isinstance(saved_question, PropertyQuestion)
+    assert "bakeries" in saved_question.question_text.lower()
+
+    # Second test case: Confirmation without question context
+    # Create fresh module instance and mock
+    comm_module = SellerBuyerCommunicationModule()
+    comm_module.llm_client.generate_response = AsyncMock(
+        return_value="NO_QUESTION_FOUND"
+    )
+
+    # Reset mock call history
+    db_session.reset_mock()
+    db_session.query.return_value.filter.return_value.first.side_effect = [
+        None,  # No existing question with this message_id
+        mock_property_conversation  # For conversation lookup
+    ]
+
+    # Update context with non-question conversation
+    context["conversation_history"] = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there! How can I help you?"},
+        {"role": "user", "content": "I'm just browsing"},
+        {"role": "assistant", "content": "Let me know if you have any questions!"}
+    ]
     
-    response = await comm_module.handle_message("What's the EPC rating?", context_without_property_info)
-    assert response == "Would you like me to pass this question on to the seller?" 
+    message = "Yes please"
+    response = await comm_module.handle_message(message=message, context=context)
+    
+    # Verify it's treated as a normal message, not a question confirmation
+    assert response != "I will forward your question to the seller and let you know once I have a response."
+    
+    # Check for various forms of clarification responses
+    clarification_phrases = [
+        "i'm not sure what you're saying yes to",
+        "could you please clarify",
+        "could you please repeat your question",
+        "need the original question",
+        "what question would you like me to forward"
+    ]
+    assert any(phrase in response.lower() for phrase in clarification_phrases), f"Response '{response}' should ask for clarification"
+
+@pytest.mark.asyncio
+async def test_llm_based_question_detection(db_session, mock_property_conversation):
+    """Test that LLM-based question detection works for various scenarios."""
+    # Create communication module
+    comm_module = SellerBuyerCommunicationModule()
+
+    # Create a mock for LLM responses
+    mock_llm_responses = {
+        # Direct question scenarios
+        "can you ask the seller about parking": "true",
+        "is there parking available": "true",
+        "i'd like to know about the heating system": "true",
+        
+        # Confirmation scenarios
+        "sure thing": "true",
+        "that would be great": "true",
+        "yes please do": "true",
+        
+        # Non-question scenarios
+        "hello": "false",
+        "thank you": "false",
+        "i understand": "false"
+    }
+
+    async def mock_generate_response(*args, **kwargs):
+        # Extract the message from the user content
+        message = [msg for msg in kwargs.get('messages', []) if msg['role'] == 'user'][0]['content']
+        # Find the matching response based on the conversation context
+        for key, value in mock_llm_responses.items():
+            if key in message.lower():
+                return value
+        return "false"
+
+    # Set up the mock LLM
+    comm_module.llm_client.generate_response = AsyncMock(side_effect=mock_generate_response)
+
+    # Test various message types
+    for message, expected_needs_input in [
+        # Direct questions
+        ("Can you ask the seller about parking", True),
+        ("Is there parking available", True),
+        ("I'd like to know about the heating system", True),
+        
+        # Confirmations with conversation history
+        ("Sure thing", True),
+        ("That would be great", True),
+        ("Yes please do", True),
+        
+        # Non-questions
+        ("Hello", False),
+        ("Thank you", False),
+        ("I understand", False),
+    ]:
+        # Create context with appropriate history for confirmation cases
+        context = {
+            "conversation_id": mock_property_conversation.id,
+            "user_id": "test_buyer",
+            "role": "buyer",
+            "counterpart_id": "test_seller",
+            "property_id": "test_property",
+            "db": db_session,
+            "message_id": 1,
+            "conversation_history": [
+                {"role": "user", "content": "Is there a garage?"},
+                {"role": "assistant", "content": "Would you like me to ask the seller about the garage?"},
+            ] if "Sure thing" in message or "That would be great" in message or "Yes please do" in message
+            else []
+        }
+        
+        # Test the message
+        needs_input = await comm_module._needs_seller_input(message)
+        assert needs_input == expected_needs_input, f"Failed for message: {message}"
+
+        if expected_needs_input:
+            # Test full message handling
+            response = await comm_module.handle_message(message=message, context=context)
+            assert response == "I will forward your question to the seller and let you know once I have a response."
+
+    # Test LLM failure fallback
+    comm_module.llm_client.generate_response = AsyncMock(side_effect=Exception("LLM Error"))
+    needs_input = await comm_module._needs_seller_input("yes please ask the seller")
+    assert needs_input == True  # Should fall back to pattern matching 

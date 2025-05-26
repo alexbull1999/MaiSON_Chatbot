@@ -10,7 +10,6 @@ class SellerBuyerCommunicationModule:
 
     def __init__(self):
         self.llm_client = LLMClient()
-        self.pending_questions = {}  # Store pending questions by conversation_id
 
     async def handle_message(self, message: str, context: Dict) -> str:
         """
@@ -24,9 +23,11 @@ class SellerBuyerCommunicationModule:
                     - counterpart_id: ID of the recipient
                     - property_id: ID of the property
                     - conversation_history: List of previous messages
-                    - property_context: Property listing data
         """
         try:
+            # Store context for use in _needs_seller_input
+            self._current_context = context
+
             # Validate context
             if not all(
                 k in context
@@ -34,58 +35,12 @@ class SellerBuyerCommunicationModule:
             ):
                 return "Missing required context for seller-buyer communication."
 
-            # Get conversation history and property context
+            # Get conversation history
             history = context.get("conversation_history", [])
-            conversation_id = context.get("conversation_id")
-            property_context = context.get("property_context", {})
-
-            # Check if this is a confirmation response to a pending question
-            if context["role"] == "buyer" and conversation_id in self.pending_questions:
-                if await self._is_confirmation_response(message):
-                    # Retrieve the original question and remove it from pending
-                    original_question = self.pending_questions.pop(conversation_id)
-                    return await self._handle_buyer_question(original_question, context)
-                else:
-                    # If it's not a confirmation but we were expecting one, clear the pending question
-                    self.pending_questions.pop(conversation_id, None)
 
             # If this is a buyer asking a question that needs seller input
-            if context["role"] == "buyer" and await self._needs_seller_input(message):
+            if context["role"] == "buyer" and self._needs_seller_input(message):
                 return await self._handle_buyer_question(message, context)
-
-            # If this is a buyer message that might be answerable from property context
-            if context["role"] == "buyer":
-                # First try to answer from property context if available
-                if property_context:
-                    try:
-                        response = await self.llm_client.generate_response(
-                            messages=[
-                                {
-                                    "role": "system",
-                                    "content": (
-                                        "You are a professional real estate communication assistant. "
-                                        "Answer the buyer's question using the available property listing information. "
-                                        "If you cannot answer the question completely with the given information, "
-                                        "respond with ONLY 'need_seller_input'."
-                                    )
-                                },
-                                {
-                                    "role": "user",
-                                    "content": f"Property information: {property_context}\n\nBuyer's question: {message}"
-                                }
-                            ],
-                            temperature=0.7,
-                            module_name="seller_buyer_communication"
-                        )
-                        if response.strip() != "need_seller_input":
-                            return response
-                    except Exception as e:
-                        print(f"Error getting response from property context: {str(e)}")
-                        # Continue to confirmation flow if we can't get a response
-
-                # If we couldn't answer from property context, store for confirmation
-                self.pending_questions[conversation_id] = message
-                return "Would you like me to pass this question on to the seller?"
 
             # For all other messages, just generate a response
             # Prepare message context for LLM
@@ -157,9 +112,14 @@ class SellerBuyerCommunicationModule:
                 db.commit()
                 return True
 
+            # Get original question from context if available
+            property_context = context.get("property_context", {})
+            if "original_question" in context:
+                property_context["original_question"] = context["original_question"]
+
             # Format message for the counterpart
             formatted_message = await self.format_message_for_counterpart(
-                message, context["role"], context.get("property_context")
+                message, context["role"], property_context
             )
 
             # Create external reference for notification
@@ -224,6 +184,10 @@ class SellerBuyerCommunicationModule:
         Adds appropriate context and professional formatting.
         """
         try:
+            # If this is a notification for a question, use the original question if available
+            if isinstance(property_context, dict) and "original_question" in property_context:
+                message = property_context["original_question"]
+
             # Prepare context for message formatting
             format_context = {
                 "sender_role": sender_role,
@@ -281,34 +245,51 @@ class SellerBuyerCommunicationModule:
 
     async def _needs_seller_input(self, message: str) -> bool:
         """
-        Use LLM to determine if a message requires seller input.
+        Use LLM to determine if a message requires seller input based on content analysis
+        and conversation history.
         """
         try:
+            # Get conversation history from context
+            history = getattr(self, '_current_context', {}).get('conversation_history', [])
+            
+            # Prepare the context for LLM
+            conversation_context = {
+                "current_message": message,
+                "conversation_history": history[-2:] if history else []  # Last 2 messages for context
+            }
+
             response = await self.llm_client.generate_response(
                 messages=[
                     {
                         "role": "system",
                         "content": (
-                            "You are a professional real estate communication assistant. "
-                            "Your task is to determine if a buyer's message requires input from the seller. "
-                            "Consider both explicit requests (e.g. 'can you ask the seller') and implicit questions "
-                            "that only the seller would know the answer to (e.g. renovation history, "
-                            "neighbor relations, noise levels, etc.). "
-                            "Respond with ONLY 'yes' or 'no'."
+                            "You are a real estate communication analyzer. Your task is to determine if a message either:\n"
+                            "1. Contains a question that needs to be forwarded to the seller, or\n"
+                            "2. Is confirming that a previous question should be forwarded to the seller\n\n"
+                            "Consider both the current message and the conversation history.\n"
+                            "Respond with exactly 'true' if either condition is met, or 'false' otherwise."
                         )
                     },
                     {
                         "role": "user",
-                        "content": f"Does this message require seller input? Message: {message}"
+                        "content": (
+                            "Please analyze this conversation context:\n"
+                            f"{conversation_context}\n\n"
+                            "Does this message either contain a question for the seller "
+                            "or confirm that a previous question should be forwarded?"
+                        )
                     }
                 ],
-                temperature=0.1,
+                temperature=0.3,  # Lower temperature for more consistent yes/no responses
                 module_name="seller_buyer_communication"
             )
-            return response.strip().lower() == "yes"
+            
+            return response.strip().lower() == 'true'
+
         except Exception as e:
-            print(f"Error determining if message needs seller input: {str(e)}")
-            # Fall back to pattern matching if LLM fails
+            print(f"Error in LLM-based seller input detection: {str(e)}")
+            # Fallback to basic pattern matching if LLM fails
+            message_lower = message.lower()
             patterns = [
                 "ask the seller",
                 "can you ask",
@@ -317,55 +298,11 @@ class SellerBuyerCommunicationModule:
                 "ask them about",
                 "could you ask",
                 "please ask",
-            ]
-            return any(pattern in message.lower() for pattern in patterns)
-
-    async def _is_confirmation_response(self, message: str) -> bool:
-        """
-        Use LLM to determine if a message is confirming that a question should be passed to the seller.
-        """
-        try:
-            response = await self.llm_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional real estate communication assistant. "
-                            "Your task is to determine if a buyer's message is confirming that they want "
-                            "their previous question forwarded to the seller. "
-                            "Consider ONLY explicit confirmations (e.g. 'yes', 'yes please', 'please do', etc.) "
-                            "and ignore any additional context or new questions. "
-                            "Respond with ONLY 'yes' or 'no'."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Is this message confirming that the question should be forwarded? Message: {message}"
-                    }
-                ],
-                temperature=0.1,  # Low temperature for more consistent yes/no answers
-                module_name="seller_buyer_communication"
-            )
-            return response.strip().lower() == "yes"
-        except Exception as e:
-            print(f"Error determining if message is confirmation: {str(e)}")
-            # Fall back to pattern matching if LLM fails
-            message_lower = message.lower().strip()
-            # More strict confirmation patterns that don't include potential new questions
-            confirmation_patterns = [
-                "yes",
                 "yes please",
+                "yes go ahead",
                 "please do",
-                "go ahead",
-                "sure",
-                "okay",
-                "of course",
-                "definitely",
-                "absolutely"
             ]
-            return any(pattern == message_lower or 
-                      message_lower.startswith(f"{pattern} ") 
-                      for pattern in confirmation_patterns)
+            return any(pattern in message_lower for pattern in patterns)
 
     async def _reformat_buyer_question(self, message: str) -> str:
         """
@@ -380,8 +317,7 @@ class SellerBuyerCommunicationModule:
                             "You are a professional real estate communication assistant. "
                             "Your task is to reformat buyer questions into clear, direct questions for sellers. "
                             "Remove phrases like 'can you ask the seller' or 'please ask' and make it a direct question. "
-                            "Maintain the original meaning but make it more professional and concise. "
-                            "Return ONLY the reformatted question."
+                            "Maintain the original meaning but make it more professional and concise."
                         )
                     },
                     {
@@ -395,8 +331,7 @@ class SellerBuyerCommunicationModule:
             return response.strip()
         except Exception as e:
             print(f"Error reformatting buyer question: {str(e)}")
-            # If reformatting fails, return a cleaned version of the original message
-            return message.strip()
+            return message  # Return original message if reformatting fails
 
     async def _handle_buyer_question(self, message: str, context: Dict) -> str:
         """
@@ -413,17 +348,47 @@ class SellerBuyerCommunicationModule:
             if existing_question:
                 return "I will forward your question to the seller and let you know once I have a response."
 
-            # Reformat the question using LLM
-            reformatted_question = await self._reformat_buyer_question(message)
+            # Get conversation history and prepare context for LLM
+            history = context.get("conversation_history", [])
+            conversation_context = {
+                "current_message": message,
+                "conversation_history": history[-3:] if history else []  # Last 3 messages for context
+            }
 
-            # Create PropertyQuestion record
+            # Use LLM to extract the question to be forwarded
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a real estate communication analyzer. Your task is to extract a question for the seller from the conversation.\n"
+                            "If the current message contains a direct question, return that question.\n"
+                            "If the current message is confirming a previous question (like 'yes please'), extract and return the original question from the conversation history.\n"
+                            "If no question can be found, respond with exactly 'NO_QUESTION_FOUND'.\n"
+                            "Format the response as a clear, direct question for the seller."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Please analyze this conversation and extract the question for the seller:\n{conversation_context}"
+                    }
+                ],
+                temperature=0.3,
+                module_name="seller_buyer_communication"
+            )
+
+            # If no question was found, ask the user to clarify
+            if response.strip() == "NO_QUESTION_FOUND":
+                return "I need the original question to forward to the seller. Could you please repeat your question?"
+
+            # Create PropertyQuestion record with the extracted question
             question = PropertyQuestion(
                 property_id=context["property_id"],
                 buyer_id=context["user_id"],
                 seller_id=context["counterpart_id"],
                 conversation_id=context["conversation_id"],
                 question_message_id=context["message_id"],
-                question_text=reformatted_question,
+                question_text=response.strip(),
             )
             
             # Add to database
@@ -442,7 +407,8 @@ class SellerBuyerCommunicationModule:
                     "sender_role": context["role"],
                     "message_type": self._classify_message_type(message),
                     "question_id": question.id,
-                    "notification_type": "new_question"
+                    "notification_type": "new_question",
+                    "original_question": message  # Include original message for context
                 },
             )
             db.add(external_ref)

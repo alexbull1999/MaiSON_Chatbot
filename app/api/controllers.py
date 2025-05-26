@@ -144,11 +144,9 @@ class ChatController:
         session_id: str,
         db: Session,
     ) -> PropertyChatResponse:
-        """
-        Handle property-specific chat messages between buyers and sellers.
-        """
+        """Handle property-specific chat messages."""
         try:
-            # Get or create property conversation
+            # Get or create conversation
             conversation = await self._get_or_create_property_conversation(
                 db=db,
                 session_id=session_id,
@@ -161,27 +159,8 @@ class ChatController:
             # Check if session is valid
             if not self.session_manager.is_property_session_valid(conversation):
                 raise HTTPException(
-                    status_code=401,
-                    detail="Property conversation session has expired or been archived."
-                )
-
-            # Check for duplicate message within last minute
-            last_minute = datetime.utcnow() - timedelta(minutes=1)
-            duplicate_message = (
-                db.query(PropertyMessage)
-                .filter(
-                    PropertyMessage.conversation_id == conversation.id,
-                    PropertyMessage.role == role,
-                    PropertyMessage.content == message,
-                    PropertyMessage.timestamp >= last_minute
-                )
-                .first()
-            )
-            
-            if duplicate_message:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Duplicate message detected. Please wait a moment before sending the same message again."
+                    status_code=400,
+                    detail="Property conversation session has expired or been archived.",
                 )
 
             # Create user message
@@ -192,7 +171,8 @@ class ChatController:
                 timestamp=datetime.utcnow(),
             )
             db.add(user_message)
-            db.flush()  # Get the message ID
+            db.commit()  # Commit to ensure message is in history
+            db.refresh(conversation)  # Refresh to get updated messages
 
             # Get conversation history
             conversation_history = [
@@ -271,6 +251,7 @@ class ChatController:
 
             # Update last message timestamp
             conversation.last_message_at = datetime.utcnow()
+            db.commit()
 
             return PropertyChatResponse(
                 message=response_text,

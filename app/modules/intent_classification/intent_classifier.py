@@ -1,6 +1,7 @@
 from enum import Enum
 from ..llm import LLMClient
 import re
+from typing import Optional, Dict
 
 class Intent(Enum):
     GREETING = "greeting"
@@ -62,7 +63,7 @@ class IntentClassifier:
             )
         }
 
-    def _get_classification_prompt(self) -> str:
+    def _get_classification_prompt(self, message: str, context: Optional[Dict] = None) -> str:
         """Generate the prompt for intent classification."""
         prompt = (
             "You are an intent classifier for a real estate chatbot. "
@@ -77,9 +78,23 @@ class IntentClassifier:
         prompt += (
             "\nInstructions:\n"
             "1. Analyze the user's message carefully\n"
-            "2. Consider the context and implied meaning\n"
+            "2. Consider the conversation context and implied meaning\n"
             "3. Return ONLY the intent name without any additional text\n"
             "4. If unsure, return \"unknown\"\n\n"
+        )
+
+        # Add conversation history context if available
+        if context and "conversation_history" in context:
+            history = context["conversation_history"]
+            if len(history) >= 2:  # If we have at least 2 messages
+                prompt += "Recent conversation context:\n"
+                # Add the last message from the user and the last response from the assistant
+                prompt += f"Previous user: {history[-2]['content']}\n"
+                prompt += f"Previous assistant: {history[-1]['content']}\n"
+                prompt += f"Current user message: {message}\n\n"
+
+        # Add all existing example classifications
+        prompt += (
             "Example classifications:\n"
             "# Property Inquiry Examples:\n"
             "- \"What are the features of this house?\" -> \"property_inquiry\"\n"
@@ -123,15 +138,15 @@ class IntentClassifier:
             "- \"Do you have any properties with a garden in Manchester?\" -> \"property_listings_inquiry\"\n"
             "- \"What are your newest listings?\" -> \"property_listings_inquiry\"\n"
             "- \"Can you recommend properties similar to my saved ones?\" -> \"property_listings_inquiry\"\n\n"
-            "Classify the following message:\n"
+            f"Classify the following message: {message}\n"
         )
         return prompt
 
-    async def classify(self, message: str) -> Intent:
+    async def classify(self, message: str, context: Optional[Dict] = None) -> Intent:
         """Classify the intent of a given message using LLM."""
         try:
-            # Prepare the full prompt
-            prompt = self._get_classification_prompt()
+            # Prepare the full prompt with context
+            prompt = self._get_classification_prompt(message, context)
             
             # Call LLM for classification
             response = await self.llm_client.generate_response(

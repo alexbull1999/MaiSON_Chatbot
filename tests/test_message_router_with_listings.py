@@ -56,7 +56,7 @@ async def test_route_property_listings_inquiry_general_chat(message_router):
     
     # Verify intent classification
     message_router.intent_classifier.classify_general.assert_called_once_with(message)
-    message_router.intent_classifier.classify.assert_called_once_with(message)
+    message_router.intent_classifier.classify.assert_called_once_with(message, {"session_id": "test_session", "user_id": "user123"})
     
     # Verify module call
     message_router.property_listings_module.handle_inquiry.assert_called_once()
@@ -88,7 +88,13 @@ async def test_route_property_listings_inquiry_property_chat(message_router):
     response = await message_router.route_message(message, context, chat_type="property")
     
     # Verify intent classification
-    message_router.intent_classifier.classify.assert_called_once_with(message)
+    message_router.intent_classifier.classify.assert_called_once_with(message, {
+        "session_id": "test_session",
+        "user_id": "user123",
+        "property_id": "prop123",
+        "role": "buyer",
+        "intent": "property_listings_inquiry"
+    })
     
     # Verify response
     assert response["intent"] == "property_listings_inquiry"

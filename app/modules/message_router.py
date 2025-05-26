@@ -75,40 +75,43 @@ class MessageRouter:
         """Route incoming message and return response with metadata."""
         try:
             if chat_type == "general":
-                # Use simplified classification for general chat
+                # For general chat, first check if it's a greeting
                 intent = await self.intent_classifier.classify_general(message)
                 
-                # Route to either greeting or advisory module
                 if intent == Intent.GREETING:
-                    response = await self.greeting_module.handle_greeting(message, context)
-                else:
-                    # For general chat, we still want to classify the intent more specifically
-                    # to catch website and company information queries
-                    specific_intent = await self.intent_classifier.classify(message)
+                    response = await self.greeting_module.handle_greeting(message)
+                    return {
+                        "response": response,
+                        "intent": intent.value,
+                        "context": context or {},
+                    }
+                
+                # Not a greeting, do full classification
+                specific_intent = await self.intent_classifier.classify(message, context)
+                
+                if specific_intent in [Intent.WEBSITE_FUNCTIONALITY, Intent.COMPANY_INFORMATION, Intent.PROPERTY_LISTINGS_INQUIRY]:
+                    # Update context with the intent
+                    context_with_intent = context.copy() if context else {}
+                    context_with_intent["intent"] = specific_intent.value
                     
-                    if specific_intent in [Intent.WEBSITE_FUNCTIONALITY, Intent.COMPANY_INFORMATION, Intent.PROPERTY_LISTINGS_INQUIRY]:
-                        # Update context with the intent
-                        context_with_intent = context.copy() if context else {}
-                        context_with_intent["intent"] = specific_intent.value
-                        
-                        # Extract user_id from context if available (for property listings)
-                        user_id = context.get("user_id") if context else None
-                        
-                        # Route to appropriate module based on specific intent
-                        if specific_intent == Intent.PROPERTY_LISTINGS_INQUIRY:
-                            response = await self.property_listings_module.handle_inquiry(message, context_with_intent, user_id)
-                        else:
-                            # Route to website info module
-                            response = await self._route_intent(specific_intent, message, context_with_intent)
-                        
-                        return {
-                            "response": response,
-                            "intent": specific_intent.value,
-                            "context": context_with_intent,
-                        }
+                    # Extract user_id from context if available (for property listings)
+                    user_id = context.get("user_id") if context else None
+                    
+                    # Route to appropriate module based on specific intent
+                    if specific_intent == Intent.PROPERTY_LISTINGS_INQUIRY:
+                        response = await self.property_listings_module.handle_inquiry(message, context_with_intent, user_id)
                     else:
-                        # Default to advisory module for other general questions
-                        response = await self.advisory_module.handle_general_inquiry(message, context or {})
+                        # Route to website info module
+                        response = await self._route_intent(specific_intent, message, context_with_intent)
+                    
+                    return {
+                        "response": response,
+                        "intent": specific_intent.value,
+                        "context": context_with_intent,
+                    }
+                else:
+                    # Default to advisory module for other general questions
+                    response = await self.advisory_module.handle_general_inquiry(message, context or {})
                 
                 return {
                     "response": response,
@@ -117,22 +120,19 @@ class MessageRouter:
                 }
             
             # Normal intent classification for property chat
-            intent = await self.intent_classifier.classify(message)
+            intent = await self.intent_classifier.classify(message, context)
             response = await self._route_intent(intent, message, context or {})
-
+            
             return {
                 "response": response,
                 "intent": intent.value,
                 "context": context or {},
             }
-
+            
         except Exception as e:
             print(f"Error in message routing: {str(e)}")
             return {
-                "response": (
-                    "I apologize, but I encountered an error processing your message. "
-                    "Please try again or rephrase your question."
-                ),
+                "response": "I apologize, but I encountered an error processing your message. Please try again.",
                 "intent": Intent.UNKNOWN.value,
                 "context": context or {},
             }

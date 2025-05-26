@@ -40,6 +40,10 @@ ignore =
     C901
     #Indentation
     E128
+    #Length of lines
+    E501
+    #True assertions
+    E712
    
     
 
