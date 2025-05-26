@@ -10,6 +10,7 @@ class SellerBuyerCommunicationModule:
 
     def __init__(self):
         self.llm_client = LLMClient()
+        self.pending_questions = {}  # Store pending questions by conversation_id
 
     async def handle_message(self, message: str, context: Dict) -> str:
         """
@@ -23,6 +24,7 @@ class SellerBuyerCommunicationModule:
                     - counterpart_id: ID of the recipient
                     - property_id: ID of the property
                     - conversation_history: List of previous messages
+                    - property_context: Property listing data
         """
         try:
             # Validate context
@@ -32,12 +34,58 @@ class SellerBuyerCommunicationModule:
             ):
                 return "Missing required context for seller-buyer communication."
 
-            # Get conversation history
+            # Get conversation history and property context
             history = context.get("conversation_history", [])
+            conversation_id = context.get("conversation_id")
+            property_context = context.get("property_context", {})
+
+            # Check if this is a confirmation response to a pending question
+            if (
+                context["role"] == "buyer" 
+                and conversation_id in self.pending_questions 
+                and await self._is_confirmation_response(message)
+            ):
+                # Retrieve the original question and remove it from pending
+                original_question = self.pending_questions.pop(conversation_id)
+                return await self._handle_buyer_question(original_question, context)
 
             # If this is a buyer asking a question that needs seller input
-            if context["role"] == "buyer" and self._needs_seller_input(message):
+            if context["role"] == "buyer" and await self._needs_seller_input(message):
                 return await self._handle_buyer_question(message, context)
+
+            # If this is a buyer message that might be answerable from property context
+            if context["role"] == "buyer":
+                # First try to answer from property context if available
+                if property_context:
+                    try:
+                        response = await self.llm_client.generate_response(
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": (
+                                        "You are a professional real estate communication assistant. "
+                                        "Answer the buyer's question using the available property listing information. "
+                                        "If you cannot answer the question completely with the given information, "
+                                        "respond with ONLY 'need_seller_input'."
+                                    )
+                                },
+                                {
+                                    "role": "user",
+                                    "content": f"Property information: {property_context}\n\nBuyer's question: {message}"
+                                }
+                            ],
+                            temperature=0.7,
+                            module_name="seller_buyer_communication"
+                        )
+                        if response.strip() != "need_seller_input":
+                            return response
+                    except Exception as e:
+                        print(f"Error getting response from property context: {str(e)}")
+                        # Continue to confirmation flow if we can't get a response
+
+                # If we couldn't answer from property context, store for confirmation
+                self.pending_questions[conversation_id] = message
+                return "Would you like me to pass this question on to the seller?"
 
             # For all other messages, just generate a response
             # Prepare message context for LLM
@@ -231,21 +279,89 @@ class SellerBuyerCommunicationModule:
 
         return True
 
-    def _needs_seller_input(self, message: str) -> bool:
+    async def _needs_seller_input(self, message: str) -> bool:
         """
-        Determine if a message requires seller input based on content analysis.
+        Use LLM to determine if a message requires seller input.
         """
-        # Common patterns indicating need for seller input
-        patterns = [
-            "ask the seller",
-            "can you ask",
-            "check with the seller",
-            "find out from the seller",
-            "ask them about",
-            "could you ask",
-            "please ask",
-        ]
-        return any(pattern in message.lower() for pattern in patterns)
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a professional real estate communication assistant. "
+                            "Your task is to determine if a buyer's message requires input from the seller. "
+                            "Consider both explicit requests (e.g. 'can you ask the seller') and implicit questions "
+                            "that only the seller would know the answer to (e.g. renovation history, "
+                            "neighbor relations, noise levels, etc.). "
+                            "Respond with ONLY 'yes' or 'no'."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Does this message require seller input? Message: {message}"
+                    }
+                ],
+                temperature=0.1,
+                module_name="seller_buyer_communication"
+            )
+            return response.strip().lower() == "yes"
+        except Exception as e:
+            print(f"Error determining if message needs seller input: {str(e)}")
+            # Fall back to pattern matching if LLM fails
+            patterns = [
+                "ask the seller",
+                "can you ask",
+                "check with the seller",
+                "find out from the seller",
+                "ask them about",
+                "could you ask",
+                "please ask",
+            ]
+            return any(pattern in message.lower() for pattern in patterns)
+
+    async def _is_confirmation_response(self, message: str) -> bool:
+        """
+        Use LLM to determine if a message is confirming that a question should be passed to the seller.
+        """
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a professional real estate communication assistant. "
+                            "Your task is to determine if a buyer's message is confirming that they want "
+                            "their previous question forwarded to the seller. "
+                            "Consider both explicit confirmations (e.g. 'yes please') and implicit ones "
+                            "(e.g. 'that would be great'). "
+                            "Respond with ONLY 'yes' or 'no'."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Is this message confirming that the question should be forwarded? Message: {message}"
+                    }
+                ],
+                temperature=0.1,  # Low temperature for more consistent yes/no answers
+                module_name="seller_buyer_communication"
+            )
+            return response.strip().lower() == "yes"
+        except Exception as e:
+            print(f"Error determining if message is confirmation: {str(e)}")
+            # Fall back to pattern matching if LLM fails
+            message_lower = message.lower().strip()
+            confirmation_patterns = [
+                "yes",
+                "yes please",
+                "please do",
+                "go ahead",
+                "pass it on",
+                "forward it",
+                "ask them",
+                "pass the question",
+            ]
+            return any(pattern in message_lower for pattern in confirmation_patterns)
 
     async def _reformat_buyer_question(self, message: str) -> str:
         """
@@ -260,7 +376,8 @@ class SellerBuyerCommunicationModule:
                             "You are a professional real estate communication assistant. "
                             "Your task is to reformat buyer questions into clear, direct questions for sellers. "
                             "Remove phrases like 'can you ask the seller' or 'please ask' and make it a direct question. "
-                            "Maintain the original meaning but make it more professional and concise."
+                            "Maintain the original meaning but make it more professional and concise. "
+                            "Return ONLY the reformatted question."
                         )
                     },
                     {
@@ -274,7 +391,8 @@ class SellerBuyerCommunicationModule:
             return response.strip()
         except Exception as e:
             print(f"Error reformatting buyer question: {str(e)}")
-            return message  # Return original message if reformatting fails
+            # If reformatting fails, return a cleaned version of the original message
+            return message.strip()
 
     async def _handle_buyer_question(self, message: str, context: Dict) -> str:
         """
