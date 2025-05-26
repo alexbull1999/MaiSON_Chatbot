@@ -366,3 +366,30 @@ async def answer_property_question(
         raise HTTPException(status_code=404, detail="Question not found or could not be answered")
     
     return {"status": "success", "message": "Answer recorded and sent to buyer"}
+
+
+@router.delete("/seller/questions/{seller_id}")
+async def delete_seller_questions(
+    seller_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete all questions for a specific seller.
+    """
+    try:
+        # Start a transaction
+        db.begin()
+        
+        # Delete all questions for this seller
+        questions = db.query(PropertyQuestion).filter(
+            PropertyQuestion.seller_id == seller_id
+        ).all()
+        
+        for question in questions:
+            db.delete(question)
+        
+        db.commit()
+        return {"status": "success", "message": f"Deleted all questions for seller {seller_id}"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

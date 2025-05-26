@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
@@ -272,4 +272,53 @@ async def test_invalid_question_status_transition(db_session, mock_property_ques
     # Verify no database changes were made
     db_session.add.assert_not_called()
     db_session.commit.assert_not_called()
-    assert mock_property_question.answer_text == "Previous answer" 
+    assert mock_property_question.answer_text == "Previous answer"
+
+@pytest.mark.asyncio
+async def test_question_reformatting(db_session, mock_property_conversation):
+    """Test that buyer questions are properly reformatted before being saved."""
+    # Create communication module
+    comm_module = SellerBuyerCommunicationModule()
+
+    # Mock LLM response for question reformatting
+    comm_module.llm_client.generate_response = AsyncMock(
+        return_value="Does the property have an underground bunker?"
+    )
+
+    # Mock database queries
+    db_session.query.return_value.filter.return_value.first.side_effect = [
+        None,  # No existing question with this message_id
+        mock_property_conversation  # For conversation lookup
+    ]
+
+    # Create context
+    context = {
+        "conversation_id": mock_property_conversation.id,
+        "user_id": "test_buyer",
+        "role": "buyer",
+        "counterpart_id": "test_seller",
+        "property_id": "test_property",
+        "db": db_session,
+        "message_id": 1
+    }
+
+    # Test asking a question that needs reformatting
+    message = "yes please can you ask the seller if the property has an underground bunker"
+    response = await comm_module.handle_message(message=message, context=context)
+
+    # Verify response
+    assert response == "I will forward your question to the seller and let you know once I have a response."
+
+    # Verify the question was reformatted before being saved
+    calls = db_session.add.call_args_list
+    assert len(calls) == 2  # One for question, one for external reference
+    saved_question = calls[0][0][0]
+    assert isinstance(saved_question, PropertyQuestion)
+    assert saved_question.question_text == "Does the property have an underground bunker?"
+
+    # Verify both PropertyQuestion and ExternalReference were created
+    assert db_session.add.call_count == 2
+
+    # Verify the correct objects were created
+    assert isinstance(calls[0][0][0], PropertyQuestion)
+    assert isinstance(calls[1][0][0], ExternalReference) 

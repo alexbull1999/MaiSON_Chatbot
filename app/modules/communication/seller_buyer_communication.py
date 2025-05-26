@@ -247,6 +247,35 @@ class SellerBuyerCommunicationModule:
         ]
         return any(pattern in message.lower() for pattern in patterns)
 
+    async def _reformat_buyer_question(self, message: str) -> str:
+        """
+        Use LLM to reformat a buyer's question into a clear, direct question for the seller.
+        """
+        try:
+            response = await self.llm_client.generate_response(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a professional real estate communication assistant. "
+                            "Your task is to reformat buyer questions into clear, direct questions for sellers. "
+                            "Remove phrases like 'can you ask the seller' or 'please ask' and make it a direct question. "
+                            "Maintain the original meaning but make it more professional and concise."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Please reformat this buyer's question into a clear, direct question: {message}"
+                    }
+                ],
+                temperature=0.7,
+                module_name="seller_buyer_communication"
+            )
+            return response.strip()
+        except Exception as e:
+            print(f"Error reformatting buyer question: {str(e)}")
+            return message  # Return original message if reformatting fails
+
     async def _handle_buyer_question(self, message: str, context: Dict) -> str:
         """
         Handle a buyer's question that needs to be forwarded to the seller.
@@ -262,6 +291,9 @@ class SellerBuyerCommunicationModule:
             if existing_question:
                 return "I will forward your question to the seller and let you know once I have a response."
 
+            # Reformat the question using LLM
+            reformatted_question = await self._reformat_buyer_question(message)
+
             # Create PropertyQuestion record
             question = PropertyQuestion(
                 property_id=context["property_id"],
@@ -269,7 +301,7 @@ class SellerBuyerCommunicationModule:
                 seller_id=context["counterpart_id"],
                 conversation_id=context["conversation_id"],
                 question_message_id=context["message_id"],
-                question_text=message,
+                question_text=reformatted_question,
             )
             
             # Add to database
