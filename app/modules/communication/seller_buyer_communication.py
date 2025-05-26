@@ -40,14 +40,14 @@ class SellerBuyerCommunicationModule:
             property_context = context.get("property_context", {})
 
             # Check if this is a confirmation response to a pending question
-            if (
-                context["role"] == "buyer" 
-                and conversation_id in self.pending_questions 
-                and await self._is_confirmation_response(message)
-            ):
-                # Retrieve the original question and remove it from pending
-                original_question = self.pending_questions.pop(conversation_id)
-                return await self._handle_buyer_question(original_question, context)
+            if context["role"] == "buyer" and conversation_id in self.pending_questions:
+                if await self._is_confirmation_response(message):
+                    # Retrieve the original question and remove it from pending
+                    original_question = self.pending_questions.pop(conversation_id)
+                    return await self._handle_buyer_question(original_question, context)
+                else:
+                    # If it's not a confirmation but we were expecting one, clear the pending question
+                    self.pending_questions.pop(conversation_id, None)
 
             # If this is a buyer asking a question that needs seller input
             if context["role"] == "buyer" and await self._needs_seller_input(message):
@@ -333,8 +333,8 @@ class SellerBuyerCommunicationModule:
                             "You are a professional real estate communication assistant. "
                             "Your task is to determine if a buyer's message is confirming that they want "
                             "their previous question forwarded to the seller. "
-                            "Consider both explicit confirmations (e.g. 'yes please') and implicit ones "
-                            "(e.g. 'that would be great'). "
+                            "Consider ONLY explicit confirmations (e.g. 'yes', 'yes please', 'please do', etc.) "
+                            "and ignore any additional context or new questions. "
                             "Respond with ONLY 'yes' or 'no'."
                         )
                     },
@@ -351,17 +351,21 @@ class SellerBuyerCommunicationModule:
             print(f"Error determining if message is confirmation: {str(e)}")
             # Fall back to pattern matching if LLM fails
             message_lower = message.lower().strip()
+            # More strict confirmation patterns that don't include potential new questions
             confirmation_patterns = [
                 "yes",
                 "yes please",
                 "please do",
                 "go ahead",
-                "pass it on",
-                "forward it",
-                "ask them",
-                "pass the question",
+                "sure",
+                "okay",
+                "of course",
+                "definitely",
+                "absolutely"
             ]
-            return any(pattern in message_lower for pattern in confirmation_patterns)
+            return any(pattern == message_lower or 
+                      message_lower.startswith(f"{pattern} ") 
+                      for pattern in confirmation_patterns)
 
     async def _reformat_buyer_question(self, message: str) -> str:
         """

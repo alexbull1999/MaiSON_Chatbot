@@ -38,6 +38,8 @@ ignore =
     E226
     #Complexity when actually its just lots of simple if/elses
     C901
+    #Indentation
+    E128
    
     
 
